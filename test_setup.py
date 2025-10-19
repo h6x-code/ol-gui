@@ -167,7 +167,4 @@ except Exception as e:
 print("\n" + "=" * 60)
 print("✓ All tests passed!")
 print("=" * 60)
-print("\nProject setup is ready. Next steps:")
-print("  1. Install dependencies: pip install -r requirements.txt")
-print("  2. Run the app: python src/main.py")
-print("  3. Start building UI components")
+print("\nProject setup is ready.")
