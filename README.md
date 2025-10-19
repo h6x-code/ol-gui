@@ -1,2 +1,2 @@
 # ol-gui
-A sleek minimalist GUI intended for Ollama.
+A sleek, minimalist GUI intended for Ollama.
