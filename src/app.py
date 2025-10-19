@@ -326,6 +326,10 @@ class OllamaGUI(ctk.CTk):
         self.settings.set("window_width", self.winfo_width())
         self.settings.set("window_height", self.winfo_height())
 
+        # Unload current model from VRAM
+        if self.current_model:
+            self.ollama.cleanup(self.current_model)
+
         # Close window
         self.destroy()
 

@@ -24,7 +24,17 @@ class OllamaService:
         """
         try:
             response = self.client.list()
-            return response.get("models", [])
+            # Response is a ListResponse object with a 'models' attribute
+            models = []
+            for model in response.get('models', []):
+                # Convert Model object to dictionary
+                models.append({
+                    "name": model.model,  # model.model contains the name
+                    "size": model.size,
+                    "modified_at": str(model.modified_at) if model.modified_at else None,
+                    "digest": model.digest,
+                })
+            return models
         except Exception as e:
             raise Exception(f"Failed to fetch models: {str(e)}")
 
@@ -74,8 +84,11 @@ class OllamaService:
             Response content chunks.
         """
         for chunk in response:
-            if "message" in chunk and "content" in chunk["message"]:
-                yield chunk["message"]["content"]
+            # Chunk is a ChatResponse object with a 'message' attribute
+            if hasattr(chunk, 'message') and chunk.message:
+                content = chunk.message.content
+                if content:  # Only yield non-empty content
+                    yield content
 
     def check_connection(self) -> bool:
         """
@@ -89,3 +102,33 @@ class OllamaService:
             return True
         except Exception:
             return False
+
+    def unload_model(self, model: str) -> None:
+        """
+        Unload a model from VRAM to free up resources.
+
+        This sends a request with keep_alive=0 to immediately unload the model.
+
+        Args:
+            model: The model name to unload.
+        """
+        try:
+            # Generate with keep_alive=0 tells Ollama to immediately unload
+            self.client.generate(
+                model=model,
+                prompt="",
+                keep_alive=0
+            )
+        except Exception:
+            # Silently fail - model may already be unloaded or not loaded
+            pass
+
+    def cleanup(self, current_model: Optional[str] = None) -> None:
+        """
+        Clean up resources and unload models from VRAM.
+
+        Args:
+            current_model: The currently active model to unload (optional).
+        """
+        if current_model:
+            self.unload_model(current_model)
