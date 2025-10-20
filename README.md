@@ -55,6 +55,8 @@ ollama serve
 Run the application:
 ```bash
 python src/main.py
+# or
+./run.sh
 ```
 
 ### Hidden Commands
