@@ -161,6 +161,22 @@ class ConversationManager:
             for row in rows
         ]
 
+    def rename_conversation(self, conversation_id: int, new_title: str) -> None:
+        """
+        Rename a conversation.
+
+        Args:
+            conversation_id: The conversation ID to rename.
+            new_title: The new title for the conversation.
+        """
+        with self.db.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE conversations SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (new_title, conversation_id),
+            )
+            conn.commit()
+
     def delete_conversation(self, conversation_id: int) -> None:
         """
         Delete a conversation and all its messages.

@@ -34,7 +34,7 @@ class InputPanel(ctk.CTkFrame):
         self.configure(
             fg_color=("#f5f5f5", "#2d2d2d"),  # (light, dark)
             corner_radius=0,
-            height=120,
+            height=240,
         )
 
         # Create inner frame for padding
@@ -50,7 +50,7 @@ class InputPanel(ctk.CTkFrame):
             border_width=1,
             border_color=("#2196f3", "#4a9eff"),  # (light, dark)
             wrap="word",
-            height=60,
+            height=180,
         )
         self.input_text.pack(side="left", fill="both", expand=True, padx=(0, 10))
         self.input_text.bind("<Return>", self._on_enter_key)
@@ -68,11 +68,11 @@ class InputPanel(ctk.CTkFrame):
             button_frame,
             text="Send",
             command=self._handle_send,
-            font=("", 14, "bold"),
+            font=("", 24, "bold"),
             fg_color=("#2196f3", "#4a9eff"),  # (light, dark)
             hover_color=("#1976d2", "#3d8ee6"),
             width=100,
-            height=40,
+            height=60,
         )
         self.send_button.pack(pady=(0, 5))
 

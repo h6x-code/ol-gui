@@ -2,7 +2,7 @@
 Sidebar component for model selection and conversation history.
 """
 import customtkinter as ctk
-from typing import Callable, List, Optional, Dict, Any
+from typing import Callable, List, Optional, Dict
 
 
 class Sidebar(ctk.CTkFrame):
@@ -37,14 +37,14 @@ class Sidebar(ctk.CTkFrame):
 
         self.current_conversation_id: Optional[int] = None
         self.conversation_buttons: Dict[int, ctk.CTkButton] = {}
+        self.current_font_size: int = 14  # Default font size, will be updated
 
         self._setup_ui()
 
     def _setup_ui(self) -> None:
         """Set up the sidebar UI."""
         self.configure(
-            fg_color=("#f5f5f5", "#2d2d2d"),  # (light, dark)
-            width=200,
+            fg_color=("#e0e0e0", "#2d2d2d"),  # (light, dark)
             corner_radius=0,
         )
 
@@ -52,7 +52,7 @@ class Sidebar(ctk.CTkFrame):
         self.header = ctk.CTkLabel(
             self,
             text="Ol-GUI",
-            font=("", 20, "bold"),
+            font=("", 24, "bold"),
             text_color=("#2196f3", "#4a9eff"),  # (light, dark)
         )
         self.header.pack(pady=(20, 10), padx=20)
@@ -197,13 +197,16 @@ class Sidebar(ctk.CTkFrame):
         btn_frame = ctk.CTkFrame(self.conversations_frame, fg_color="transparent")
         btn_frame.pack(fill="x", pady=2, padx=5)
 
+        # Calculate font size for conversation button (scaled from current font size)
+        conv_font_size = max(10, self.current_font_size - 3)
+
         # Conversation button
         conv_btn = ctk.CTkButton(
             btn_frame,
             text=display_title,
             command=lambda: self._handle_conversation_click(conv_id),
-            font=("", 11),
-            text_color="#e0e0e0" if is_current else ("#1a1a1a", "#e0e0e0"),  # (light, dark)
+            font=("", conv_font_size),
+            text_color=("#1a1a1a", "#e0e0e0"),  # (light, dark)
             fg_color="#4a9eff" if is_current else "transparent",
             hover_color="#3d8ee6" if is_current else "#3d3d3d",
             anchor="w",
@@ -211,23 +214,28 @@ class Sidebar(ctk.CTkFrame):
         )
         conv_btn.pack(side="left", fill="x", expand=True, padx=(0, 5))
 
-        # Delete button (small)
-        delete_btn = ctk.CTkButton(
+        # Options button (three dots)
+        options_btn = ctk.CTkButton(
             btn_frame,
-            text="×",
-            command=lambda: self._handle_delete_click(conv_id),
-            font=("", 16),
+            text="⋮",
+            command=lambda: self._show_conversation_options(conv_id, options_btn),
+            font=("", 18),
             text_color=("#1a1a1a", "#e0e0e0"),  # (light, dark)
             fg_color="transparent",
-            hover_color=("#f27a6c", "#e74c3c"),
+            hover_color=("#e0e0e0", "#3d3d3d"),
             width=30,
             height=35,
         )
-        delete_btn.pack(side="right")
+        options_btn.pack(side="right")
 
         self.conversation_buttons[conv_id] = conv_btn
 
         if is_current:
+            # Deselect all other conversations
+            for cid, btn in self.conversation_buttons.items():
+                if cid != conv_id:
+                    btn.configure(fg_color="transparent", hover_color="#3d3d3d")
+
             self.current_conversation_id = conv_id
 
     def _handle_conversation_click(self, conv_id: int) -> None:
@@ -249,13 +257,131 @@ class Sidebar(ctk.CTkFrame):
         if self.on_conversation_select:
             self.on_conversation_select(conv_id)
 
-    def _handle_delete_click(self, conv_id: int) -> None:
+    def _show_conversation_options(self, conv_id: int, button_widget) -> None:
         """
-        Handle conversation delete button click.
+        Show options menu for a conversation.
+
+        Args:
+            conv_id: Conversation ID.
+            button_widget: The button widget that triggered the menu.
+        """
+        # Create a menu
+        menu = ctk.CTkToplevel(self)
+        menu.withdraw()  # Hide initially
+        menu.overrideredirect(True)  # Remove window decorations
+
+        # Configure menu appearance
+        menu.configure(fg_color=("#ffffff", "#2d2d2d"))
+
+        # Create menu frame
+        menu_frame = ctk.CTkFrame(
+            menu,
+            fg_color=("#ffffff", "#2d2d2d"),
+            border_width=1,
+            border_color=("#cccccc", "#555555"),
+        )
+        menu_frame.pack(fill="both", expand=True)
+
+        # Rename option
+        rename_btn = ctk.CTkButton(
+            menu_frame,
+            text="Rename",
+            command=lambda: self._handle_rename_click(conv_id, menu),
+            fg_color="transparent",
+            text_color=("#1a1a1a", "#e0e0e0"),
+            hover_color=("#e0e0e0", "#3d3d3d"),
+            anchor="w",
+            height=30,
+        )
+        rename_btn.pack(fill="x", padx=5, pady=(5, 2))
+
+        # Delete option
+        delete_btn = ctk.CTkButton(
+            menu_frame,
+            text="Delete",
+            command=lambda: self._handle_delete_click(conv_id, menu),
+            fg_color="transparent",
+            text_color=("#1a1a1a", "#e0e0e0"),
+            hover_color=("#ee9a90", "#c0392b"),
+            anchor="w",
+            height=30,
+        )
+        delete_btn.pack(fill="x", padx=5, pady=(2, 5))
+
+        # Position menu near the button
+        button_x = button_widget.winfo_rootx()
+        button_y = button_widget.winfo_rooty()
+        menu.geometry(f"120x70+{button_x - 90}+{button_y + 35}")
+
+        # Show menu
+        menu.deiconify()
+        menu.lift()
+
+        # Close menu when clicking outside
+        def close_menu(event=None):
+            if menu.winfo_exists():
+                menu.destroy()
+
+        # Bind to click events outside the menu
+        def on_click_outside(event):
+            # Check if click is outside the menu
+            x, y = event.x_root, event.y_root
+            menu_x = menu.winfo_rootx()
+            menu_y = menu.winfo_rooty()
+            menu_width = menu.winfo_width()
+            menu_height = menu.winfo_height()
+
+            if not (menu_x <= x <= menu_x + menu_width and menu_y <= y <= menu_y + menu_height):
+                close_menu()
+
+        # Bind escape key
+        menu.bind("<Escape>", close_menu)
+
+        # Bind click event to root window after a short delay
+        menu.after(100, lambda: menu.master.bind("<Button-1>", on_click_outside, add="+"))
+
+        # Clean up binding when menu is destroyed
+        def on_destroy(event=None):
+            try:
+                menu.master.unbind("<Button-1>")
+            except:
+                pass
+
+        menu.bind("<Destroy>", on_destroy)
+
+    def _handle_rename_click(self, conv_id: int, menu) -> None:
+        """
+        Handle conversation rename option click.
+
+        Args:
+            conv_id: Conversation ID to rename.
+            menu: The options menu to close.
+        """
+        menu.destroy()
+
+        # Create rename dialog
+        dialog = ctk.CTkInputDialog(
+            text="Enter new name:",
+            title="Rename Conversation"
+        )
+        new_title = dialog.get_input()
+
+        if new_title and new_title.strip():
+            # Call rename callback if it exists
+            if hasattr(self, "on_rename_conversation") and self.on_rename_conversation:
+                self.on_rename_conversation(conv_id, new_title.strip())
+
+    def _handle_delete_click(self, conv_id: int, menu=None) -> None:
+        """
+        Handle conversation delete option click.
 
         Args:
             conv_id: Conversation ID to delete.
+            menu: The options menu to close (optional).
         """
+        if menu:
+            menu.destroy()
+
         if self.on_delete_conversation:
             self.on_delete_conversation(conv_id)
 
@@ -303,6 +429,29 @@ class Sidebar(ctk.CTkFrame):
         """
         self.on_settings = callback
 
+    def set_rename_conversation_callback(self, callback: Callable[[int, str], None]) -> None:
+        """
+        Set the callback for renaming a conversation.
+
+        Args:
+            callback: Function to call when a conversation is renamed.
+                     Takes (conv_id, new_title) as arguments.
+        """
+        self.on_rename_conversation = callback
+
+    def update_conversation_title(self, conv_id: int, new_title: str) -> None:
+        """
+        Update the displayed title of a conversation.
+
+        Args:
+            conv_id: Conversation ID.
+            new_title: New title to display.
+        """
+        if conv_id in self.conversation_buttons:
+            # Truncate long titles
+            display_title = new_title[:30] + "..." if len(new_title) > 30 else new_title
+            self.conversation_buttons[conv_id].configure(text=display_title)
+
     def update_theme(self, theme: str) -> None:
         """
         Update the sidebar theme colors.
@@ -310,18 +459,8 @@ class Sidebar(ctk.CTkFrame):
         Args:
             theme: Theme name ("dark", "light", or "system")
         """
-        if theme == "light":
-            surface_color = "#f5f5f5"
-            bg_color = "#ffffff"
-            text_color = "#1a1a1a"
-            secondary_text = "#666666"
-            hover_color = "#e0e0e0"
-        else:
-            surface_color = "#2d2d2d"
-            bg_color = "#1a1a1a"
-            text_color = "#e0e0e0"
-            secondary_text = "#a0a0a0"
-            hover_color = "#3d3d3d"
+        # Determine hover color based on theme
+        hover_color = "#e0e0e0" if theme == "light" else "#3d3d3d"
 
         # Most widgets use color tuples and update automatically via set_appearance_mode()
         # No need to manually update sidebar, labels, buttons, etc.
@@ -333,3 +472,40 @@ class Sidebar(ctk.CTkFrame):
                 btn.configure(fg_color="#4a9eff", hover_color="#3d8ee6")
             else:
                 btn.configure(fg_color="transparent", hover_color=hover_color)
+
+    def update_font_size(self, font_size: int) -> None:
+        """
+        Update the sidebar font sizes.
+
+        Args:
+            font_size: Base font size in pixels
+        """
+        # Store current font size for new conversation buttons
+        self.current_font_size = font_size
+
+        # Scale sidebar fonts relative to base font size
+        # Sidebar uses smaller fonts than main content
+        header_size = max(24, font_size + 24)  # Header slightly larger
+        button_size = max(12, font_size - 1)  # Buttons slightly smaller
+        label_size = max(11, font_size - 2)   # Labels smaller
+
+        # Update header
+        self.header.configure(font=("", header_size, "bold"))
+
+        # Update new chat button
+        self.new_conv_btn.configure(font=("", button_size, "bold"))
+
+        # Update labels
+        self.model_label.configure(font=("", label_size, "bold"))
+        self.history_label.configure(font=("", label_size, "bold"))
+
+        # Update model dropdown
+        self.model_dropdown.configure(font=("", button_size))
+
+        # Update buttons
+        self.refresh_btn.configure(font=("", max(10, font_size - 3)))
+        self.settings_btn.configure(font=("", button_size))
+
+        # Update conversation buttons
+        for btn in self.conversation_buttons.values():
+            btn.configure(font=("", max(10, font_size - 3)))

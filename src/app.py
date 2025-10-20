@@ -68,8 +68,13 @@ class OllamaGUI(ctk.CTk):
 
     def _setup_ui(self) -> None:
         """Set up the user interface layout."""
-        # Configure grid
-        self.grid_columnconfigure(1, weight=1)
+        # Initialize sidebar width
+        self.sidebar_width = self.settings.get("sidebar_width", 350)
+
+        # Configure grid - control column widths directly
+        self.grid_columnconfigure(0, weight=0, minsize=self.sidebar_width)  # Sidebar - controlled width
+        self.grid_columnconfigure(1, weight=0, minsize=4)  # Separator - 4px
+        self.grid_columnconfigure(2, weight=1)  # Chat/Input - expandable
         self.grid_rowconfigure(0, weight=1)
 
         # Sidebar
@@ -83,19 +88,29 @@ class OllamaGUI(ctk.CTk):
         self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew")
         self.sidebar.set_refresh_models_callback(self._refresh_models)
         self.sidebar.set_settings_callback(self._on_settings)
+        self.sidebar.set_rename_conversation_callback(self._on_rename_conversation)
+
+        # Resize separator
+        self.separator = ctk.CTkFrame(self, width=4, fg_color=("#cccccc", "#444444"), cursor="sb_h_double_arrow")
+        self.separator.grid(row=0, column=1, rowspan=2, sticky="ns")
+        self.separator.bind("<Button-1>", self._start_resize)
+        self.separator.bind("<B1-Motion>", self._do_resize)
 
         # Chat panel (with saved font size)
         font_size = self.settings.get("font_size", 14)
         self.chat_panel = ChatPanel(self, font_size=font_size)
-        self.chat_panel.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
+        self.chat_panel.grid(row=0, column=2, sticky="nsew", padx=0, pady=0)
 
         # Input panel
         self.input_panel = InputPanel(
             self,
             on_send=self._on_send_message,
         )
-        self.input_panel.grid(row=1, column=1, sticky="ew", padx=0, pady=0)
+        self.input_panel.grid(row=1, column=2, sticky="ew", padx=0, pady=0)
         self.input_panel.set_stop_callback(self._stop_generation_callback)
+
+        # Bind window resize to constrain sidebar
+        self.bind("<Configure>", self._on_window_resize)
 
     def _load_initial_data(self) -> None:
         """Load initial data (models, conversations)."""
@@ -214,6 +229,28 @@ class OllamaGUI(ctk.CTk):
         except Exception as e:
             print(f"Failed to load conversation: {e}")
 
+    def _on_rename_conversation(self, conv_id: int, new_title: str) -> None:
+        """
+        Handle conversation rename.
+
+        Args:
+            conv_id: Conversation ID to rename.
+            new_title: New title for the conversation.
+        """
+        try:
+            # Update in database
+            self.conv_manager.rename_conversation(conv_id, new_title)
+
+            # Update UI
+            self.sidebar.update_conversation_title(conv_id, new_title)
+
+            # Update current conversation title if it's the one being renamed
+            if self.current_conversation and self.current_conversation.id == conv_id:
+                self.current_conversation.title = new_title
+
+        except Exception as e:
+            print(f"Failed to rename conversation: {e}")
+
     def _on_delete_conversation(self, conv_id: int) -> None:
         """
         Handle conversation deletion.
@@ -314,8 +351,23 @@ class OllamaGUI(ctk.CTk):
         self.after(0, lambda: self.input_panel.set_sending_state(True))
 
         try:
-            # Start streaming message
+            # Start streaming message with thinking animation
             self.after(0, lambda: self.chat_panel.start_streaming_message("assistant"))
+
+            # Start thinking animation
+            thinking_animation_running = [True]  # Use list to allow modification in nested function
+            thinking_dots = [0]
+
+            def animate_thinking():
+                if not thinking_animation_running[0]:
+                    return
+                dots = "." * (thinking_dots[0] + 1)
+                self.after(0, lambda: self.chat_panel.update_streaming_message(f"Thinking{dots}"))
+                thinking_dots[0] = (thinking_dots[0] + 1) % 3
+                if thinking_animation_running[0]:
+                    threading.Timer(0.5, animate_thinking).start()
+
+            animate_thinking()
 
             # Get message history
             messages = []
@@ -340,6 +392,10 @@ class OllamaGUI(ctk.CTk):
                     if self._stop_generation:
                         break
 
+                    # Stop thinking animation on first chunk
+                    if not full_response:
+                        thinking_animation_running[0] = False
+
                     full_response += chunk
                     # Update UI in main thread
                     self.after(0, lambda r=full_response: self.chat_panel.update_streaming_message(r))
@@ -353,6 +409,9 @@ class OllamaGUI(ctk.CTk):
                     messages,
                     stream=False
                 )
+
+                # Stop thinking animation
+                thinking_animation_running[0] = False
 
                 # Response is a ChatResponse object with message attribute
                 if hasattr(response, 'message'):
@@ -424,6 +483,35 @@ class OllamaGUI(ctk.CTk):
         self.chat_panel.update_theme(theme)
         self.input_panel.update_theme(theme)
 
+    def _start_resize(self, event) -> None:
+        """Handle start of sidebar resize."""
+        self._resize_start_x = event.x_root
+
+    def _do_resize(self, event) -> None:
+        """Handle sidebar resize dragging."""
+        # Calculate new width based on mouse position
+        # Use absolute position relative to window start
+        mouse_x = event.x_root - self.winfo_rootx()
+
+        # Apply constraints
+        min_width = 300
+        max_width = self.winfo_width() // 2
+
+        new_width = max(min_width, min(mouse_x, max_width))
+
+        # Update sidebar width by configuring the grid column
+        self.sidebar_width = new_width
+        self.grid_columnconfigure(0, minsize=new_width)
+
+    def _on_window_resize(self, event) -> None:
+        """Handle window resize to constrain sidebar width."""
+        if event.widget == self:
+            # Check if sidebar exceeds max allowed width
+            max_width = self.winfo_width() // 2
+            if self.sidebar_width > max_width:
+                self.sidebar_width = max_width
+                self.grid_columnconfigure(0, minsize=max_width)
+
     def _apply_font_size(self, font_size: int) -> None:
         """
         Apply font size to all components.
@@ -431,6 +519,10 @@ class OllamaGUI(ctk.CTk):
         Args:
             font_size: Font size in pixels
         """
+        # Update sidebar
+        if hasattr(self.sidebar, 'update_font_size'):
+            self.sidebar.update_font_size(font_size)
+
         # Update input panel text box
         if hasattr(self.input_panel, 'input_text'):
             self.input_panel.input_text.configure(font=("", font_size))
@@ -446,9 +538,10 @@ class OllamaGUI(ctk.CTk):
 
     def _on_closing(self) -> None:
         """Handle window closing event."""
-        # Save window size
+        # Save window size and sidebar width
         self.settings.set("window_width", self.winfo_width())
         self.settings.set("window_height", self.winfo_height())
+        self.settings.set("sidebar_width", self.sidebar_width)
 
         # Unload current model from VRAM
         if self.current_model:

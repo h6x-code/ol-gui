@@ -24,8 +24,12 @@ class ChatPanel(ctk.CTkScrollableFrame):
         self.message_widgets: List[MessageBubble] = []
         self._current_streaming_bubble: Optional[MessageBubble] = None
         self.font_size = font_size
+        self._welcome_frame: Optional[ctk.CTkFrame] = None
 
         self._setup_ui()
+
+        # Bind to configure event to resize message bubbles
+        self.bind("<Configure>", self._on_resize)
 
     def _setup_ui(self) -> None:
         """Set up the chat panel UI."""
@@ -39,21 +43,25 @@ class ChatPanel(ctk.CTkScrollableFrame):
 
     def _show_welcome_message(self) -> None:
         """Display a welcome message when chat is empty."""
-        welcome_frame = ctk.CTkFrame(self, fg_color="transparent")
-        welcome_frame.pack(expand=True, pady=100)
+        # Only create welcome message if it doesn't already exist
+        if self._welcome_frame is not None and self._welcome_frame.winfo_exists():
+            return
+
+        self._welcome_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self._welcome_frame.pack(expand=True, pady=100)
 
         title = ctk.CTkLabel(
-            welcome_frame,
+            self._welcome_frame,
             text="Ol-GUI",
-            font=("", 32, "bold"),
+            font=("", 48, "bold"),
             text_color=("#2196f3", "#4a9eff"),  # (light, dark)
         )
         title.pack(pady=(0, 10))
 
         subtitle = ctk.CTkLabel(
-            welcome_frame,
+            self._welcome_frame,
             text="Start a conversation with your local LLM",
-            font=("", 14),
+            font=("", 24),
             text_color=("#666666", "#a0a0a0"),  # (light, dark)
         )
         subtitle.pack()
@@ -70,8 +78,9 @@ class ChatPanel(ctk.CTkScrollableFrame):
         """
         # Remove welcome message if this is the first message
         if len(self.message_widgets) == 0:
-            for widget in self.winfo_children():
-                widget.destroy()
+            if self._welcome_frame is not None and self._welcome_frame.winfo_exists():
+                self._welcome_frame.destroy()
+                self._welcome_frame = None
 
         # Create message bubble with current font size
         bubble = MessageBubble(
@@ -175,3 +184,19 @@ class ChatPanel(ctk.CTkScrollableFrame):
             bg_color = "#1a1a1a"
 
         self.configure(fg_color=bg_color)
+
+    def _on_resize(self, event) -> None:
+        """Handle resize events to recalculate all message bubble heights."""
+        # Only recalculate if the width actually changed
+        if event.widget == self and event.width != getattr(self, '_last_width', 0):
+            self._last_width = event.width
+            # Debounce resize events to avoid too many updates
+            if hasattr(self, '_resize_timer'):
+                self.after_cancel(self._resize_timer)
+            self._resize_timer = self.after(100, self._recalculate_all_heights)
+
+    def _recalculate_all_heights(self) -> None:
+        """Recalculate heights for all message bubbles."""
+        for bubble in self.message_widgets:
+            if hasattr(bubble, '_calculate_height'):
+                bubble._calculate_height()

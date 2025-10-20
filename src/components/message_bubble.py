@@ -55,7 +55,7 @@ class MessageBubble(ctk.CTkFrame):
         # Role label (small text above message)
         label_color = text_color
 
-        # Calculate role label font size (smaller than content)
+        # Calculate role label font size (8 points larger than content)
         label_font_size = max(11, self.font_size - 3)
 
         role_label = ctk.CTkLabel(
@@ -68,27 +68,68 @@ class MessageBubble(ctk.CTkFrame):
         role_label.pack(pady=(8, 2), padx=12, anchor=anchor, fill="x")
 
         # Message content
-        content_label = ctk.CTkTextbox(
+        self.content_label = ctk.CTkTextbox(
             self,
             font=("", self.font_size),
             fg_color=fg_color,
             text_color=text_color,
             wrap="word",
-            activate_scrollbars=False,
+            activate_scrollbars=True,
         )
-        content_label.insert("1.0", self.content)
-        content_label.configure(state="disabled")  # Read-only
+        self.content_label.insert("1.0", self.content)
+        self.content_label.configure(state="disabled")  # Read-only
 
-        # Calculate height based on content and font size
+        # Pack first to get accurate measurements
+        self.content_label.pack(pady=(0, 8), padx=12, fill="both", expand=True)
+
+        # Calculate dynamic height based on actual content
+        self._calculate_height()
+
+    def _calculate_height(self) -> None:
+        """Calculate and set the appropriate height for the message content."""
+        # Get actual width of the textbox (accounting for padding)
+        self.update_idletasks()  # Ensure geometry is updated
+        widget_width = self.content_label.winfo_width()
+
+        # If width is not available yet (initial setup), use estimate
+        if widget_width <= 1:
+            widget_width = 400  # Default estimate
+
+        # Calculate approximate characters per line based on font size
+        # Use conservative estimate (0.45 instead of 0.5) to err on the side of taller bubbles
+        # This accounts for variable-width fonts where some chars are wider
+        avg_char_width = self.font_size * 0.45
+        chars_per_line = int((widget_width - 30) / avg_char_width)  # More padding
+        chars_per_line = max(chars_per_line, 15)  # Minimum reasonable width
+
+        # Count actual newlines
         num_lines = self.content.count("\n") + 1
-        # Estimate line wrapping (adjust for font size)
-        chars_per_line = int(60 * (14 / self.font_size))
-        estimated_lines = max(num_lines, len(self.content) // chars_per_line + 1)
-        line_height = int(20 * (self.font_size / 14))
-        height = min(max(estimated_lines * line_height, 40), 400)  # Between 40 and 400px
 
-        content_label.pack(pady=(0, 8), padx=12, fill="both", expand=True)
-        content_label.configure(height=height)
+        # Estimate wrapped lines - add extra padding to prevent cutoff
+        text_length = len(self.content)
+        estimated_wrapped_lines = (text_length // chars_per_line) + 1
+
+        # Add 1 extra line as buffer to prevent text cutoff
+        estimated_wrapped_lines += 1
+
+        # Total lines is the max of explicit newlines and wrapped lines
+        total_lines = max(num_lines, estimated_wrapped_lines)
+
+        # Calculate height with better font size scaling
+        # Use 1.5 instead of 1.4 for more generous line height
+        base_line_height = 1.5  # Line height multiplier (CSS-like)
+        line_height = int(self.font_size * base_line_height)
+
+        # Calculate total height with extra padding
+        content_height = total_lines * line_height + 10  # Add 10px extra padding
+
+        # Set reasonable min/max bounds
+        min_height = line_height * 2  # At least 2 lines
+        max_height = 600  # Increased maximum to allow taller bubbles
+
+        final_height = max(min_height, min(content_height, max_height))
+
+        self.content_label.configure(height=final_height)
 
     def update_content(self, content: str) -> None:
         """
@@ -98,21 +139,15 @@ class MessageBubble(ctk.CTkFrame):
             content: New content text.
         """
         self.content = content
-        # Find and update the textbox
-        for widget in self.winfo_children():
-            if isinstance(widget, ctk.CTkTextbox):
-                widget.configure(state="normal")
-                widget.delete("1.0", "end")
-                widget.insert("1.0", content)
-                widget.configure(state="disabled")
 
-                # Update height
-                num_lines = content.count("\n") + 1
-                chars_per_line = 60
-                estimated_lines = max(num_lines, len(content) // chars_per_line + 1)
-                height = min(max(estimated_lines * 20, 40), 400)
-                widget.configure(height=height)
-                break
+        # Update the textbox content
+        self.content_label.configure(state="normal")
+        self.content_label.delete("1.0", "end")
+        self.content_label.insert("1.0", content)
+        self.content_label.configure(state="disabled")
+
+        # Recalculate height for new content
+        self._calculate_height()
 
     def update_font_size(self, font_size: int) -> None:
         """
@@ -121,21 +156,17 @@ class MessageBubble(ctk.CTkFrame):
         Args:
             font_size: New font size in pixels
         """
-        # Update all text widgets
+        # Update stored font size
+        self.font_size = font_size
+
+        # Update content textbox font
+        self.content_label.configure(font=("", font_size))
+
+        # Update role label font (proportionally smaller)
         for widget in self.winfo_children():
-            if isinstance(widget, ctk.CTkTextbox):
-                # Update content textbox
-                widget.configure(font=("", font_size))
-
-                # Recalculate height based on new font size
-                num_lines = self.content.count("\n") + 1
-                chars_per_line = int(60 * (14 / font_size))  # Adjust for font size
-                estimated_lines = max(num_lines, len(self.content) // chars_per_line + 1)
-                line_height = int(20 * (font_size / 14))  # Scale line height
-                height = min(max(estimated_lines * line_height, 40), 400)
-                widget.configure(height=height)
-
-            elif isinstance(widget, ctk.CTkLabel):
-                # Update role label (keep it smaller than content)
+            if isinstance(widget, ctk.CTkLabel):
                 label_size = max(11, font_size - 3)
                 widget.configure(font=("", label_size))
+
+        # Recalculate height with new font size
+        self._calculate_height()
