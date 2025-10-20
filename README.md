@@ -12,7 +12,7 @@ A sleek, minimalist GUI for [Ollama](https://ollama.ai) - interact with local LL
 - **Model Selection**: Switch between installed Ollama models on the fly
 - **Customizable**:
   - Light and dark themes
-  - Adjustable font size (10-24px)
+  - Adjustable font size (10-36px)
   - Resizable sidebar (300px to half window width)
   - Settings persist between sessions
 - **Smart Features**:
@@ -40,7 +40,12 @@ cd ol-gui
 pip install -r requirements.txt
 ```
 
-3. Make sure Ollama is running:
+3. Copy `.desktop` for local installation:
+```bash
+cp ol-gui.desktop ~/.local/share/applications/
+```
+
+4. Make sure Ollama is running:
 ```bash
 ollama serve
 ```

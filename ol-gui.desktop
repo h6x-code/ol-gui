@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=0.0
+Type=Application
+Name=OL-GUI
+Comment=GUI frontend for Ollama
+Exec=/home/h6x/Programming/ol-gui/run.sh
+Icon=/home/h6x/Programming/ol-gui/assets/icon.png
+Terminal=false
+Categories=Utility;Development;
+StartupWMClass=OL-GUI
