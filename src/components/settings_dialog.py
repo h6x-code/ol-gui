@@ -32,14 +32,17 @@ class SettingsDialog(ctk.CTkToplevel):
 
         # Window configuration
         self.title("Settings")
-        self.geometry("500x500")
-        self.resizable(False, False)
+        self.geometry("800x600")
+        # self.resizable(False, False)
 
         # Make dialog modal
         self.transient(parent)
 
         # Store original values for cancel
         self.original_settings = self.settings_manager.get_all().copy()
+
+        # Get current font size for dialog display (before any changes)
+        self.display_font_size = self.settings_manager.get("font_size", 14)
 
         self._setup_ui()
 
@@ -76,6 +79,7 @@ class SettingsDialog(ctk.CTkToplevel):
             command=self._on_cancel,
             fg_color="transparent",
             border_width=2,
+            font=("", self.display_font_size),
             width=100,
         )
         cancel_btn.pack(side="right", padx=(10, 0))
@@ -84,6 +88,7 @@ class SettingsDialog(ctk.CTkToplevel):
             button_frame,
             text="Save",
             command=self._on_save,
+            font=("", self.display_font_size),
             width=100,
         )
         save_btn.pack(side="right")
@@ -93,11 +98,12 @@ class SettingsDialog(ctk.CTkToplevel):
         section = ctk.CTkFrame(parent, fg_color=("#e0e0e0", "#2d2d2d"))  # (light, dark)
         section.pack(fill="x", pady=(0, 15))
 
-        # Section title
+        # Section title (use current font size, not the one being adjusted)
+        title_size = max(16, self.display_font_size + 2)
         ctk.CTkLabel(
             section,
             text="Appearance",
-            font=("", 16, "bold"),
+            font=("", title_size, "bold"),
             anchor="w",
         ).pack(fill="x", padx=15, pady=(15, 10))
 
@@ -108,6 +114,7 @@ class SettingsDialog(ctk.CTkToplevel):
         ctk.CTkLabel(
             theme_frame,
             text="Theme:",
+            font=("", self.display_font_size),
             width=120,
             anchor="w",
         ).pack(side="left")
@@ -118,6 +125,8 @@ class SettingsDialog(ctk.CTkToplevel):
             variable=self.theme_var,
             values=["dark", "light", "system"],
             command=self._on_theme_change,
+            font=("", self.display_font_size),
+            dropdown_font=("", self.display_font_size),  # Font for dropdown menu items
         )
         theme_menu.pack(side="left", fill="x", expand=True)
 
@@ -128,6 +137,7 @@ class SettingsDialog(ctk.CTkToplevel):
         ctk.CTkLabel(
             font_frame,
             text="Font Size:",
+            font=("", self.display_font_size),
             width=120,
             anchor="w",
         ).pack(side="left")
@@ -145,6 +155,7 @@ class SettingsDialog(ctk.CTkToplevel):
         self.font_size_label = ctk.CTkLabel(
             font_frame,
             text=f"{self.font_size_var.get()}px",
+            font=("", self.display_font_size),
             width=40,
         )
         self.font_size_label.pack(side="left")
@@ -157,24 +168,27 @@ class SettingsDialog(ctk.CTkToplevel):
         section = ctk.CTkFrame(parent, fg_color=("#e0e0e0", "#2d2d2d"))  # (light, dark)
         section.pack(fill="x", pady=(0, 15))
 
-        # Section title
+        # Section title (use current font size, not the one being adjusted)
+        title_size = max(16, self.display_font_size + 4)
         ctk.CTkLabel(
             section,
             text="General",
-            font=("", 16, "bold"),
+            font=("", title_size, "bold"),
             anchor="w",
         ).pack(fill="x", padx=15, pady=(15, 10))
 
         # Auto-save
         autosave_frame = ctk.CTkFrame(section, fg_color="transparent")
         autosave_frame.pack(fill="x", padx=15, pady=5)
+        autosave_frame.grid_columnconfigure(0, weight=1)  # Label column expands
+        autosave_frame.grid_columnconfigure(1, weight=0)  # Switch column fixed
 
         ctk.CTkLabel(
             autosave_frame,
             text="Auto-save conversations:",
-            width=200,
+            font=("", self.display_font_size),
             anchor="w",
-        ).pack(side="left")
+        ).grid(row=0, column=0, sticky="w")
 
         self.autosave_var = ctk.BooleanVar(value=self.settings_manager.get("auto_save", True))
         autosave_switch = ctk.CTkSwitch(
@@ -182,18 +196,20 @@ class SettingsDialog(ctk.CTkToplevel):
             text="",
             variable=self.autosave_var,
         )
-        autosave_switch.pack(side="left")
+        autosave_switch.grid(row=0, column=1, sticky="e")
 
         # Streaming
         stream_frame = ctk.CTkFrame(section, fg_color="transparent")
         stream_frame.pack(fill="x", padx=15, pady=(5, 15))
+        stream_frame.grid_columnconfigure(0, weight=1)  # Label column expands
+        stream_frame.grid_columnconfigure(1, weight=0)  # Switch column fixed
 
         ctk.CTkLabel(
             stream_frame,
             text="Stream responses:",
-            width=200,
+            font=("", self.display_font_size),
             anchor="w",
-        ).pack(side="left")
+        ).grid(row=0, column=0, sticky="w")
 
         self.stream_var = ctk.BooleanVar(value=self.settings_manager.get("stream_responses", True))
         stream_switch = ctk.CTkSwitch(
@@ -201,7 +217,7 @@ class SettingsDialog(ctk.CTkToplevel):
             text="",
             variable=self.stream_var,
         )
-        stream_switch.pack(side="left")
+        stream_switch.grid(row=0, column=1, sticky="e")
 
     def _update_font_size_label(self, *args) -> None:
         """Update the font size label when slider changes."""

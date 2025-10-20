@@ -3,6 +3,8 @@ Sidebar component for model selection and conversation history.
 """
 import customtkinter as ctk
 from typing import Callable, List, Optional, Dict
+from pathlib import Path
+from PIL import Image
 
 
 class Sidebar(ctk.CTkFrame):
@@ -37,9 +39,46 @@ class Sidebar(ctk.CTkFrame):
 
         self.current_conversation_id: Optional[int] = None
         self.conversation_buttons: Dict[int, ctk.CTkButton] = {}
+        self.conversation_options_buttons: Dict[int, ctk.CTkButton] = {}  # Store options buttons
         self.current_font_size: int = 14  # Default font size, will be updated
 
+        self._load_logo()
         self._setup_ui()
+
+    def _load_logo(self) -> None:
+        """Load the icon image."""
+        try:
+            icon_path = Path(__file__).parent.parent.parent / "assets" / "icon.png"
+            self.original_icon = Image.open(icon_path)
+            self.icon_ctk_image = None
+        except Exception as e:
+            print(f"Failed to load icon: {e}")
+            self.original_icon = None
+            self.icon_ctk_image = None
+
+    def _update_icon_size(self, scale: float) -> None:
+        """Create icon image at 4x original size."""
+        if not self.original_icon:
+            return
+
+        try:
+            # Scale to size
+            original_width, original_height = self.original_icon.size
+            target_width = original_width * scale
+            target_height = original_height * scale
+
+            # Create scaled CTkImage
+            self.icon_ctk_image = ctk.CTkImage(
+                light_image=self.original_icon,
+                dark_image=self.original_icon,
+                size=(target_width, target_height)
+            )
+
+            # Update the icon label if it exists
+            if hasattr(self, 'icon_label'):
+                self.icon_label.configure(image=self.icon_ctk_image)
+        except Exception as e:
+            print(f"Failed to update icon size: {e}")
 
     def _setup_ui(self) -> None:
         """Set up the sidebar UI."""
@@ -48,14 +87,26 @@ class Sidebar(ctk.CTkFrame):
             corner_radius=0,
         )
 
-        # Header (blue stays same in both themes)
+        # Icon and header
+        if self.original_icon:
+            # Create scaled icon
+            self._update_icon_size(1)
+
+            self.icon_label = ctk.CTkLabel(
+                self,
+                text="",  # No text, just image
+                image=self.icon_ctk_image,
+            )
+            self.icon_label.pack(pady=(20, 5), padx=20)
+
+        # Text header (always show)
         self.header = ctk.CTkLabel(
             self,
-            text="Ol-GUI",
+            text="OL-GUI",
             font=("", 24, "bold"),
             text_color=("#2196f3", "#4a9eff"),  # (light, dark)
         )
-        self.header.pack(pady=(20, 10), padx=20)
+        self.header.pack(pady=(0, 10), padx=20)
 
         # New conversation button
         self.new_conv_btn = ctk.CTkButton(
@@ -77,14 +128,15 @@ class Sidebar(ctk.CTkFrame):
             text_color=("#666666", "#a0a0a0"),  # (light, dark)
             anchor="w",
         )
-        self.model_label.pack(pady=(10, 5), padx=20, fill="x")
+        self.model_label.pack(pady=(0, 5), padx=20, fill="x")
 
         self.model_dropdown = ctk.CTkOptionMenu(
             self,
             values=["Loading..."],
             command=self._handle_model_change,
             font=("", 12),
-            fg_color=("#888888", "#1a1a1a"),  # (light, dark)
+            dropdown_font=("", 12),  # Font for dropdown menu items
+            fg_color=("#2196f3", "#4a9eff"),  # (light, dark)
             button_color=("#2196f3", "#4a9eff"),
             button_hover_color=("#1976d2", "#3d8ee6"),
         )
@@ -202,6 +254,7 @@ class Sidebar(ctk.CTkFrame):
 
         # Calculate font size for conversation button (scaled from current font size)
         conv_font_size = max(10, self.current_font_size - 3)
+        options_font_size = max(16, self.current_font_size + 4)  # Options button slightly larger
 
         # Conversation button
         conv_btn = ctk.CTkButton(
@@ -209,11 +262,11 @@ class Sidebar(ctk.CTkFrame):
             text=display_title,
             command=lambda: self._handle_conversation_click(conv_id),
             font=("", conv_font_size),
-            text_color=("#1a1a1a", "#e0e0e0"),  # (light, dark)
+            text_color="#e0e0e0" if is_current else ("#1a1a1a", "#e0e0e0"),  # (light, dark)
             fg_color="#4a9eff" if is_current else "transparent",
-            hover_color="#3d8ee6" if is_current else "#3d3d3d",
+            hover_color="#3d8ee6" if is_current else ("#aaaaaa", "#3d3d3d"),
             anchor="w",
-            height=35,
+            height=30,
         )
         conv_btn.pack(side="left", fill="x", expand=True, padx=(0, 5))
 
@@ -222,22 +275,23 @@ class Sidebar(ctk.CTkFrame):
             btn_frame,
             text="⋮",
             command=lambda: self._show_conversation_options(conv_id, options_btn),
-            font=("", 18),
+            font=("", options_font_size),
             text_color=("#1a1a1a", "#e0e0e0"),  # (light, dark)
             fg_color="transparent",
-            hover_color=("#e0e0e0", "#3d3d3d"),
+            hover_color=("#aaaaaa", "#3d3d3d"),
             width=30,
-            height=35,
+            height=30,
         )
         options_btn.pack(side="right")
 
         self.conversation_buttons[conv_id] = conv_btn
+        self.conversation_options_buttons[conv_id] = options_btn
 
         if is_current:
             # Deselect all other conversations
             for cid, btn in self.conversation_buttons.items():
                 if cid != conv_id:
-                    btn.configure(fg_color="transparent", hover_color="#3d3d3d")
+                    btn.configure(fg_color="transparent", hover_color=("#aaaaaa", "#3d3d3d"))
 
             self.current_conversation_id = conv_id
 
@@ -251,9 +305,17 @@ class Sidebar(ctk.CTkFrame):
         # Update button colors
         for cid, btn in self.conversation_buttons.items():
             if cid == conv_id:
-                btn.configure(fg_color="#4a9eff", hover_color="#3d8ee6")
+                btn.configure(
+                    fg_color="#4a9eff",
+                    text_color="#e0e0e0",
+                    hover_color="#3d8ee6"
+                )
             else:
-                btn.configure(fg_color="transparent", hover_color="#3d3d3d")
+                btn.configure(
+                    fg_color="transparent",
+                    text_color=("#1a1a1a", "#e0e0e0"),
+                    hover_color=("#aaaaaa", "#3d3d3d")
+                )
 
         self.current_conversation_id = conv_id
 
@@ -362,10 +424,11 @@ class Sidebar(ctk.CTkFrame):
         """
         menu.destroy()
 
-        # Create rename dialog
+        # Create rename dialog with current font size
         dialog = ctk.CTkInputDialog(
             text="Enter new name:",
-            title="Rename Conversation"
+            title="Rename",
+            font=("", self.current_font_size)
         )
         new_title = dialog.get_input()
 
@@ -402,6 +465,8 @@ class Sidebar(ctk.CTkFrame):
             btn_frame.destroy()
 
             del self.conversation_buttons[conv_id]
+            if conv_id in self.conversation_options_buttons:
+                del self.conversation_options_buttons[conv_id]
 
             if self.current_conversation_id == conv_id:
                 self.current_conversation_id = None
@@ -412,6 +477,7 @@ class Sidebar(ctk.CTkFrame):
             widget.destroy()
 
         self.conversation_buttons.clear()
+        self.conversation_options_buttons.clear()
         self.current_conversation_id = None
 
     def set_refresh_models_callback(self, callback: Callable[[], None]) -> None:
@@ -472,9 +538,17 @@ class Sidebar(ctk.CTkFrame):
         for conv_id, btn in self.conversation_buttons.items():
             is_current = (conv_id == self.current_conversation_id)
             if is_current:
-                btn.configure(fg_color="#4a9eff", hover_color="#3d8ee6")
+                btn.configure(
+                    fg_color="#4a9eff",
+                    text_color="#e0e0e0",
+                    hover_color="#3d8ee6"
+                )
             else:
-                btn.configure(fg_color="transparent", hover_color=hover_color)
+                btn.configure(
+                    fg_color="transparent",
+                    text_color=("#1a1a1a", "#e0e0e0"),
+                    hover_color=("#aaaaaa", "#3d3d3d")
+                )
 
     def update_font_size(self, font_size: int) -> None:
         """
@@ -492,8 +566,9 @@ class Sidebar(ctk.CTkFrame):
         button_size = max(12, font_size - 1)  # Buttons slightly smaller
         label_size = max(11, font_size - 2)   # Labels smaller
 
-        # Update header
-        self.header.configure(font=("", header_size, "bold"))
+        # Update header (only if using text fallback)
+        if hasattr(self, 'header'):
+            self.header.configure(font=("", header_size, "bold"))
 
         # Update new chat button
         self.new_conv_btn.configure(font=("", button_size, "bold"))
@@ -502,8 +577,11 @@ class Sidebar(ctk.CTkFrame):
         self.model_label.configure(font=("", label_size, "bold"))
         self.history_label.configure(font=("", label_size, "bold"))
 
-        # Update model dropdown
-        self.model_dropdown.configure(font=("", button_size))
+        # Update model dropdown (both button and dropdown menu)
+        self.model_dropdown.configure(
+            font=("", button_size),
+            dropdown_font=("", button_size)
+        )
 
         # Update buttons
         self.refresh_btn.configure(font=("", max(10, font_size - 3)))
@@ -512,6 +590,11 @@ class Sidebar(ctk.CTkFrame):
         # Update conversation buttons
         for btn in self.conversation_buttons.values():
             btn.configure(font=("", max(10, font_size - 3)))
+
+        # Update conversation options buttons (three dots)
+        options_font_size = max(16, font_size + 4)
+        for btn in self.conversation_options_buttons.values():
+            btn.configure(font=("", options_font_size))
 
     def _bind_conversations_mouse_wheel(self) -> None:
         """Bind mouse wheel events for scrolling when mouse enters conversations frame."""

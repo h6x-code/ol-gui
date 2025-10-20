@@ -55,7 +55,7 @@ class ChatPanel(ctk.CTkScrollableFrame):
 
         title = ctk.CTkLabel(
             self._welcome_frame,
-            text="Ol-GUI",
+            text="OL-GUI",
             font=("", 48, "bold"),
             text_color=("#2196f3", "#4a9eff"),  # (light, dark)
         )

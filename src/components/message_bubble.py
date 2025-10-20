@@ -42,8 +42,8 @@ class MessageBubble(ctk.CTkFrame):
             text_color = ("#ffffff", "#ffffff")  # White text in both themes
             anchor = "e"  # Right align
         elif self.role == "assistant":
-            fg_color = ("#f5f5f5", "#2d2d2d")  # Surface color for assistant (light, dark)
-            text_color = ("#1a1a1a", "#e0e0e0")  # Text color (light, dark)
+            fg_color = ("#e0e0e0", "#2d2d2d")  # Surface color for assistant (light, dark)
+            text_color = ("#1a1a1a", "#f5f5f5")  # Text color (light, dark)
             anchor = "w"  # Left align
         else:  # system
             fg_color = ("#ffa33b", "#3d3d3d")  # Yellow/dark for system (light, dark)

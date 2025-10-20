@@ -271,6 +271,22 @@ class OllamaGUI(ctk.CTk):
                 self.chat_panel.load_messages(conv.messages)
                 self.sidebar.model_dropdown.set(conv.model)
 
+                # Update sidebar button visual state (without triggering callback)
+                for cid, btn in self.sidebar.conversation_buttons.items():
+                    if cid == conv_id:
+                        btn.configure(
+                            fg_color="#4a9eff",
+                            text_color="#e0e0e0",
+                            hover_color="#3d8ee6"
+                        )
+                    else:
+                        btn.configure(
+                            fg_color="transparent",
+                            text_color=("#1a1a1a", "#e0e0e0"),
+                            hover_color=("#aaaaaa", "#3d3d3d")
+                        )
+                self.sidebar.current_conversation_id = conv_id
+
         except Exception as e:
             print(f"Failed to load conversation: {e}")
 
@@ -404,23 +420,23 @@ class OllamaGUI(ctk.CTk):
         self.after(0, lambda: self.input_panel.set_sending_state(True))
 
         try:
-            # Start streaming message with thinking animation
+            # Start streaming message with generating animation
             self.after(0, lambda: self.chat_panel.start_streaming_message("assistant"))
 
-            # Start thinking animation
-            thinking_animation_running = [True]  # Use list to allow modification in nested function
-            thinking_dots = [0]
+            # Start generating animation
+            generating_animation_running = [True]  # Use list to allow modification in nested function
+            generating_dots = [0]
 
-            def animate_thinking():
-                if not thinking_animation_running[0]:
+            def animate_generating():
+                if not generating_animation_running[0]:
                     return
-                dots = "." * (thinking_dots[0] + 1)
-                self.after(0, lambda: self.chat_panel.update_streaming_message(f"Thinking{dots}"))
-                thinking_dots[0] = (thinking_dots[0] + 1) % 3
-                if thinking_animation_running[0]:
-                    threading.Timer(0.5, animate_thinking).start()
+                dots = "." * (generating_dots[0] + 1)
+                self.after(0, lambda: self.chat_panel.update_streaming_message(f"Generating response{dots}"))
+                generating_dots[0] = (generating_dots[0] + 1) % 3
+                if generating_animation_running[0]:
+                    threading.Timer(0.5, animate_generating).start()
 
-            animate_thinking()
+            animate_generating()
 
             # Get message history
             messages = []
@@ -445,9 +461,9 @@ class OllamaGUI(ctk.CTk):
                     if self._stop_generation:
                         break
 
-                    # Stop thinking animation on first chunk
+                    # Stop generating animation on first chunk
                     if not full_response:
-                        thinking_animation_running[0] = False
+                        generating_animation_running[0] = False
 
                     full_response += chunk
                     # Update UI in main thread
@@ -463,8 +479,8 @@ class OllamaGUI(ctk.CTk):
                     stream=False
                 )
 
-                # Stop thinking animation
-                thinking_animation_running[0] = False
+                # Stop generating animation
+                generating_animation_running[0] = False
 
                 # Response is a ChatResponse object with message attribute
                 if hasattr(response, 'message'):
