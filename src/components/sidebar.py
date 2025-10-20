@@ -159,7 +159,7 @@ class Sidebar(ctk.CTkFrame):
             font=("", 11),
             text_color=("#000000", "#ffffff"),
             fg_color="transparent",
-            hover_color=("#e0e0e0", "#3d3d3d"),  # (light, dark)
+            hover_color=("#aaaaaa", "#3d3d3d"),  # (light, dark)
             height=30,
         )
         self.refresh_btn.pack(pady=(0, 20), padx=20, fill="x")
@@ -196,7 +196,7 @@ class Sidebar(ctk.CTkFrame):
             font=("", 12),
             fg_color="transparent",
             text_color=("#1a1a1a", "#e0e0e0"),  # (light, dark)
-            hover_color=("#e0e0e0", "#3d3d3d"),  # (light, dark)
+            hover_color=("#aaaaaa", "#3d3d3d"),  # (light, dark)
             height=35,
         )
         self.settings_btn.pack(side="bottom", pady=15, padx=20, fill="x")
@@ -537,9 +537,6 @@ class Sidebar(ctk.CTkFrame):
         Args:
             theme: Theme name ("dark", "light", or "system")
         """
-        # Determine hover color based on theme
-        hover_color = "#e0e0e0" if theme == "light" else "#3d3d3d"
-
         # Most widgets use color tuples and update automatically via set_appearance_mode()
         # No need to manually update sidebar, labels, buttons, etc.
 
