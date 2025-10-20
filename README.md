@@ -13,10 +13,10 @@ A sleek, minimalist GUI for [Ollama](https://ollama.ai) - interact with local LL
 - **Customizable**:
   - Light and dark themes
   - Adjustable font size (10-36px)
-  - Resizable sidebar (300px to half window width)
+  - Resizable sidebar (300px minimum, up to half window width)
   - Settings persist between sessions
 - **Smart Features**:
-  - Streaming responses with "Thinking..." animation
+  - Streaming responses with "Generating response..." animation
   - Scrollable message bubbles for long responses
   - Window size and layout preferences saved automatically
   - Stop generation mid-response
@@ -104,9 +104,9 @@ ol-gui/
 
 ## Configuration
 
-Settings are stored in `~/.config/ol-gui/`:
-- `settings.json` - User preferences (theme, font size, window size, etc.)
-- `conversations.db` - SQLite database with conversation history
+Application data is stored in two locations:
+- `~/.config/ol-gui/settings.json` - User preferences (theme, font size, window size, etc.)
+- `~/.local/share/ol-gui/conversations.db` - SQLite database with conversation history
 
 ## Development
 
@@ -122,3 +122,29 @@ MIT License - See LICENSE file for details
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+---
+
+## Future Enhancements
+
+### Next
+- [ ] **Theme Customization:** Custom color schemes, multiple built-in themes
+- [ ] **Export Conversations:** Export to Markdown, JSON, or plain text
+- [ ] **System Prompts:** Custom system prompts per conversation
+- [ ] **Model Parameters:** Temperature, top_p, top_k, max_tokens adjustments
+- [ ] **Search:** Search through conversation history
+- [ ] **Keyboard Shortcuts:** Comprehensive keyboard navigation
+
+### Soon
+- [ ] **Conversation Templates:** Saved prompt templates
+- [ ] **Plugins/Extensions:** Basic plugin system for community extensions
+- [ ] **Model Management:** Download/delete models from GUI
+- [ ] **Import/Export Settings:** Backup and restore application settings
+- [ ] **Syntax Highlighting:** Code block detection and highlighting in messages
+
+### In Due Time
+- [ ] **Image Support:** If Ollama adds vision model support
+- [ ] **Voice Input:** Speech-to-text integration
+- [ ] **Collaborative Features:** Share conversations with others
+- [ ] **Advanced Analytics:** Token usage tracking, response time metrics
+- [ ] **System Utilization Info:** Usage of CPU threads, RAM, and VRAM (if available on system)
