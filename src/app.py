@@ -20,7 +20,7 @@ class OllamaGUI(ctk.CTk):
 
     def __init__(self) -> None:
         """Initialize the main application window."""
-        super().__init__()
+        super().__init__(className="OL-GUI")
 
         # Initialize services
         self.settings = SettingsManager()
@@ -48,7 +48,32 @@ class OllamaGUI(ctk.CTk):
 
     def _setup_window(self) -> None:
         """Configure the main window."""
-        self.title("Ol-GUI")
+        self.title("OL-GUI")
+
+        # Set app icon for dock/taskbar (Linux)
+        try:
+            from pathlib import Path
+            from PIL import Image
+            import tkinter as tk
+            import io
+
+            icon_path = Path(__file__).parent.parent / "assets" / "icon.png"
+            if icon_path.exists():
+                # Load image with PIL
+                img = Image.open(icon_path).convert('RGBA')
+
+                # Convert to PPM format in memory
+                with io.BytesIO() as output:
+                    img.save(output, format='PPM')
+                    ppm_data = output.getvalue()
+
+                # Create PhotoImage from PPM data
+                self._icon_photo = tk.PhotoImage(data=ppm_data)
+
+                # Set as window icon (for dock/taskbar on Linux)
+                self.iconphoto(True, self._icon_photo)
+        except Exception as e:
+            print(f"Failed to load icon: {e}")
 
         # Load saved window size or use defaults
         width = self.settings.get("window_width", 1200)
