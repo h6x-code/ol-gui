@@ -120,6 +120,8 @@ class SettingsDialog(ctk.CTkToplevel):
         ).pack(side="left")
 
         self.theme_var = ctk.StringVar(value=self.settings_manager.get("theme", "dark"))
+        # Calculate height based on font size to prevent vertical overflow
+        dropdown_height = max(28, self.display_font_size + 14)
         theme_menu = ctk.CTkOptionMenu(
             theme_frame,
             variable=self.theme_var,
@@ -127,8 +129,13 @@ class SettingsDialog(ctk.CTkToplevel):
             command=self._on_theme_change,
             font=("", self.display_font_size),
             dropdown_font=("", self.display_font_size),  # Font for dropdown menu items
+            fg_color=("#2196f3", "#4a9eff"),  # (light, dark)
+            button_color=("#2196f3", "#4a9eff"),
+            button_hover_color=("#1976d2", "#3d8ee6"),
+            anchor="w",  # Align text to left to prevent overlap with dropdown button
+            height=dropdown_height,  # Scale height with font size
         )
-        theme_menu.pack(side="left", fill="x", expand=True)
+        theme_menu.pack(side="left", fill="x", expand=True, padx=(0, 10))
 
         # Font size
         font_frame = ctk.CTkFrame(section, fg_color="transparent")
@@ -191,12 +198,17 @@ class SettingsDialog(ctk.CTkToplevel):
         ).grid(row=0, column=0, sticky="w")
 
         self.autosave_var = ctk.BooleanVar(value=self.settings_manager.get("auto_save", True))
-        autosave_switch = ctk.CTkSwitch(
+        # Calculate switch size based on font size
+        switch_width = max(36, int(self.display_font_size * 2.2))
+        switch_height = max(18, int(self.display_font_size * 1.1))
+        self.autosave_switch = ctk.CTkSwitch(
             autosave_frame,
             text="",
             variable=self.autosave_var,
+            switch_width=switch_width,
+            switch_height=switch_height,
         )
-        autosave_switch.grid(row=0, column=1, sticky="e")
+        self.autosave_switch.grid(row=0, column=1, sticky="e")
 
         # Streaming
         stream_frame = ctk.CTkFrame(section, fg_color="transparent")
@@ -212,12 +224,17 @@ class SettingsDialog(ctk.CTkToplevel):
         ).grid(row=0, column=0, sticky="w")
 
         self.stream_var = ctk.BooleanVar(value=self.settings_manager.get("stream_responses", True))
-        stream_switch = ctk.CTkSwitch(
+        # Calculate switch size based on font size
+        switch_width = max(36, int(self.display_font_size * 2.2))
+        switch_height = max(18, int(self.display_font_size * 1.1))
+        self.stream_switch = ctk.CTkSwitch(
             stream_frame,
             text="",
             variable=self.stream_var,
+            switch_width=switch_width,
+            switch_height=switch_height,
         )
-        stream_switch.grid(row=0, column=1, sticky="e")
+        self.stream_switch.grid(row=0, column=1, sticky="e")
 
     def _update_font_size_label(self, *args) -> None:
         """Update the font size label when slider changes."""

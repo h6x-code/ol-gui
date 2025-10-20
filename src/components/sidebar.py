@@ -57,7 +57,7 @@ class Sidebar(ctk.CTkFrame):
             self.icon_ctk_image = None
 
     def _update_icon_size(self, scale: float) -> None:
-        """Create icon image at 4x original size."""
+        """Create icon image at scaled size."""
         if not self.original_icon:
             return
 
@@ -130,8 +130,14 @@ class Sidebar(ctk.CTkFrame):
         )
         self.model_label.pack(pady=(0, 5), padx=20, fill="x")
 
+        # Create frame for dropdown to match settings dialog pattern
+        model_dropdown_frame = ctk.CTkFrame(self, fg_color="transparent")
+        model_dropdown_frame.pack(fill="x", padx=20, pady=(0, 10))
+
+        # Calculate initial height based on default font size
+        dropdown_height = max(28, 12 + 14)
         self.model_dropdown = ctk.CTkOptionMenu(
-            self,
+            model_dropdown_frame,
             values=["Loading..."],
             command=self._handle_model_change,
             font=("", 12),
@@ -139,8 +145,11 @@ class Sidebar(ctk.CTkFrame):
             fg_color=("#2196f3", "#4a9eff"),  # (light, dark)
             button_color=("#2196f3", "#4a9eff"),
             button_hover_color=("#1976d2", "#3d8ee6"),
+            anchor="w",  # Align text to left to prevent overlap with dropdown button
+            height=dropdown_height,  # Scale height with font size
         )
-        self.model_dropdown.pack(pady=(0, 10), padx=20, fill="x")
+        # Pack like settings dialog - expand=True with right padding
+        self.model_dropdown.pack(side="left", fill="x", expand=True, padx=(0, 10))
 
         # Refresh models button
         self.refresh_btn = ctk.CTkButton(
@@ -246,7 +255,7 @@ class Sidebar(ctk.CTkFrame):
             is_current: Whether this is the currently active conversation.
         """
         # Truncate long titles
-        display_title = title[:30] + "..." if len(title) > 30 else title
+        display_title = title[:20] + "..." if len(title) > 20 else title
 
         # Create button frame with delete option
         btn_frame = ctk.CTkFrame(self.conversations_frame, fg_color="transparent")
@@ -263,8 +272,8 @@ class Sidebar(ctk.CTkFrame):
             command=lambda: self._handle_conversation_click(conv_id),
             font=("", conv_font_size),
             text_color="#e0e0e0" if is_current else ("#1a1a1a", "#e0e0e0"),  # (light, dark)
-            fg_color="#4a9eff" if is_current else "transparent",
-            hover_color="#3d8ee6" if is_current else ("#aaaaaa", "#3d3d3d"),
+            fg_color=("#2196f3", "#4a9eff") if is_current else "transparent",
+            hover_color=("#1976d2", "#3d8ee6") if is_current else ("#aaaaaa", "#3d3d3d"),
             anchor="w",
             height=30,
         )
@@ -578,9 +587,12 @@ class Sidebar(ctk.CTkFrame):
         self.history_label.configure(font=("", label_size, "bold"))
 
         # Update model dropdown (both button and dropdown menu)
+        # Calculate height based on font size to prevent vertical overflow
+        dropdown_height = max(28, button_size + 14)
         self.model_dropdown.configure(
             font=("", button_size),
-            dropdown_font=("", button_size)
+            dropdown_font=("", button_size),
+            height=dropdown_height
         )
 
         # Update buttons
