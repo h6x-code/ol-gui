@@ -136,8 +136,8 @@ class SettingsDialog(ctk.CTkToplevel):
         font_slider = ctk.CTkSlider(
             font_frame,
             from_=10,
-            to=24,
-            number_of_steps=14,
+            to=36,
+            number_of_steps=26,
             variable=self.font_size_var,
         )
         font_slider.pack(side="left", fill="x", expand=True, padx=(0, 10))

@@ -118,10 +118,19 @@ class OllamaGUI(ctk.CTk):
         threading.Thread(target=self._refresh_models, daemon=True).start()
 
         # Load conversation history
-        self._load_conversations()
+        conversations = self._load_conversations()
 
-        # Create a new conversation by default
-        self._on_new_conversation()
+        # Load most recent conversation, or create new one if none exist
+        if conversations:
+            # Load the most recent conversation (first in the list, sorted by updated_at DESC)
+            most_recent = conversations[0]
+            self._on_conversation_select(most_recent.id)
+        else:
+            # No conversations exist, create a new one
+            self._on_new_conversation()
+
+        # Recalculate message bubble heights after window is fully rendered
+        self.after(100, self._recalculate_message_heights)
 
     def _refresh_models(self) -> None:
         """Refresh the list of available models."""
@@ -147,8 +156,13 @@ class OllamaGUI(ctk.CTk):
                 None
             ))
 
-    def _load_conversations(self) -> None:
-        """Load conversation history into sidebar."""
+    def _load_conversations(self):
+        """
+        Load conversation history into sidebar.
+
+        Returns:
+            List of conversations, or empty list if loading fails.
+        """
         try:
             conversations = self.conv_manager.list_conversations()
 
@@ -161,8 +175,11 @@ class OllamaGUI(ctk.CTk):
                     is_current=False
                 )
 
+            return conversations
+
         except Exception as e:
             print(f"Failed to load conversations: {e}")
+            return []
 
     def _on_model_change(self, model_name: str) -> None:
         """
@@ -194,8 +211,11 @@ class OllamaGUI(ctk.CTk):
             self.current_conversation = conv
             self.chat_panel.clear_messages()
 
-            # Add to sidebar
-            self.sidebar.add_conversation(conv.id, conv.title, is_current=True)
+            # Reload conversations to keep sorted order (most recent first)
+            self._load_conversations()
+
+            # Set the new conversation as current in sidebar
+            self.sidebar._handle_conversation_click(conv.id)
 
             # Focus input
             self.input_panel.focus_input()
@@ -329,6 +349,14 @@ class OllamaGUI(ctk.CTk):
                 "user",
                 message_text
             )
+            # Reload conversations to update sort order (most recent first)
+            conversations = self._load_conversations()
+            # Re-select current conversation to maintain UI state
+            if conversations and self.current_conversation:
+                for conv in conversations:
+                    if conv.id == self.current_conversation.id:
+                        self.sidebar._handle_conversation_click(conv.id)
+                        break
 
         # Generate response in background
         threading.Thread(
@@ -511,6 +539,13 @@ class OllamaGUI(ctk.CTk):
             if self.sidebar_width > max_width:
                 self.sidebar_width = max_width
                 self.grid_columnconfigure(0, minsize=max_width)
+
+    def _recalculate_message_heights(self) -> None:
+        """Recalculate heights for all message bubbles."""
+        if hasattr(self.chat_panel, 'message_widgets'):
+            for bubble in self.chat_panel.message_widgets:
+                if hasattr(bubble, '_calculate_height'):
+                    bubble._calculate_height()
 
     def _apply_font_size(self, font_size: int) -> None:
         """
