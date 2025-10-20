@@ -43,78 +43,79 @@ class Sidebar(ctk.CTkFrame):
     def _setup_ui(self) -> None:
         """Set up the sidebar UI."""
         self.configure(
-            fg_color="#2d2d2d",
+            fg_color=("#f5f5f5", "#2d2d2d"),  # (light, dark)
             width=200,
             corner_radius=0,
         )
 
-        # Header
-        header = ctk.CTkLabel(
+        # Header (blue stays same in both themes)
+        self.header = ctk.CTkLabel(
             self,
             text="Ol-GUI",
             font=("", 20, "bold"),
-            text_color="#4a9eff",
+            text_color=("#2196f3", "#4a9eff"),  # (light, dark)
         )
-        header.pack(pady=(20, 10), padx=20)
+        self.header.pack(pady=(20, 10), padx=20)
 
         # New conversation button
-        new_conv_btn = ctk.CTkButton(
+        self.new_conv_btn = ctk.CTkButton(
             self,
             text="+ New Chat",
             command=self._handle_new_conversation,
             font=("", 14, "bold"),
-            fg_color="#4a9eff",
-            hover_color="#3d8ee6",
+            fg_color=("#2196f3", "#4a9eff"),  # (light, dark)
+            hover_color=("#1976d2", "#3d8ee6"),
             height=40,
         )
-        new_conv_btn.pack(pady=(0, 20), padx=20, fill="x")
+        self.new_conv_btn.pack(pady=(0, 20), padx=20, fill="x")
 
         # Model selection section
-        model_label = ctk.CTkLabel(
+        self.model_label = ctk.CTkLabel(
             self,
             text="Model",
             font=("", 12, "bold"),
-            text_color="#a0a0a0",
+            text_color=("#666666", "#a0a0a0"),  # (light, dark)
             anchor="w",
         )
-        model_label.pack(pady=(10, 5), padx=20, fill="x")
+        self.model_label.pack(pady=(10, 5), padx=20, fill="x")
 
         self.model_dropdown = ctk.CTkOptionMenu(
             self,
             values=["Loading..."],
             command=self._handle_model_change,
             font=("", 12),
-            fg_color="#1a1a1a",
-            button_color="#4a9eff",
-            button_hover_color="#3d8ee6",
+            fg_color=("#888888", "#1a1a1a"),  # (light, dark)
+            button_color=("#2196f3", "#4a9eff"),
+            button_hover_color=("#1976d2", "#3d8ee6"),
         )
         self.model_dropdown.pack(pady=(0, 10), padx=20, fill="x")
 
         # Refresh models button
-        refresh_btn = ctk.CTkButton(
+        self.refresh_btn = ctk.CTkButton(
             self,
             text="⟳ Refresh",
             command=self._handle_refresh_models,
             font=("", 11),
+            text_color=("#000000", "#ffffff"),
             fg_color="transparent",
-            hover_color="#3d3d3d",
+            hover_color=("#e0e0e0", "#3d3d3d"),  # (light, dark)
             height=30,
         )
-        refresh_btn.pack(pady=(0, 20), padx=20, fill="x")
+        self.refresh_btn.pack(pady=(0, 20), padx=20, fill="x")
 
         # Separator
-        separator = ctk.CTkFrame(self, height=2, fg_color="#1a1a1a")
-        separator.pack(fill="x", padx=20, pady=10)
+        self.separator = ctk.CTkFrame(self, height=2, fg_color=("#e0e0e0", "#1a1a1a"))
+        self.separator.pack(fill="x", padx=20, pady=10)
 
         # Conversation history section
-        history_label = ctk.CTkLabel(
+        self.history_label = ctk.CTkLabel(
             self,
             text="Conversations",
             font=("", 12, "bold"),
-            text_color="#a0a0a0",
+            text_color=("#666666", "#a0a0a0"),  # (light, dark)
             anchor="w",
         )
-        history_label.pack(pady=(10, 5), padx=20, fill="x")
+        self.history_label.pack(pady=(10, 5), padx=20, fill="x")
 
         # Scrollable frame for conversations
         self.conversations_frame = ctk.CTkScrollableFrame(
@@ -124,16 +125,17 @@ class Sidebar(ctk.CTkFrame):
         self.conversations_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
         # Settings button at bottom
-        settings_btn = ctk.CTkButton(
+        self.settings_btn = ctk.CTkButton(
             self,
             text="⚙ Settings",
             command=self._handle_settings,
             font=("", 12),
             fg_color="transparent",
-            hover_color="#3d3d3d",
+            text_color=("#1a1a1a", "#e0e0e0"),  # (light, dark)
+            hover_color=("#e0e0e0", "#3d3d3d"),  # (light, dark)
             height=35,
         )
-        settings_btn.pack(side="bottom", pady=15, padx=20, fill="x")
+        self.settings_btn.pack(side="bottom", pady=15, padx=20, fill="x")
 
     def _handle_model_change(self, model_name: str) -> None:
         """
@@ -157,8 +159,8 @@ class Sidebar(ctk.CTkFrame):
 
     def _handle_settings(self) -> None:
         """Handle settings button click."""
-        # TODO: Implement settings dialog
-        print("Settings clicked (not implemented yet)")
+        if hasattr(self, "on_settings") and self.on_settings:
+            self.on_settings()
 
     def update_models(self, models: List[str], current_model: Optional[str] = None) -> None:
         """
@@ -201,6 +203,7 @@ class Sidebar(ctk.CTkFrame):
             text=display_title,
             command=lambda: self._handle_conversation_click(conv_id),
             font=("", 11),
+            text_color="#e0e0e0" if is_current else ("#1a1a1a", "#e0e0e0"),  # (light, dark)
             fg_color="#4a9eff" if is_current else "transparent",
             hover_color="#3d8ee6" if is_current else "#3d3d3d",
             anchor="w",
@@ -214,8 +217,9 @@ class Sidebar(ctk.CTkFrame):
             text="×",
             command=lambda: self._handle_delete_click(conv_id),
             font=("", 16),
+            text_color=("#1a1a1a", "#e0e0e0"),  # (light, dark)
             fg_color="transparent",
-            hover_color="#e74c3c",
+            hover_color=("#f27a6c", "#e74c3c"),
             width=30,
             height=35,
         )
@@ -289,3 +293,43 @@ class Sidebar(ctk.CTkFrame):
             callback: Function to call when refresh is clicked.
         """
         self.on_refresh_models = callback
+
+    def set_settings_callback(self, callback: Callable[[], None]) -> None:
+        """
+        Set the callback for opening settings.
+
+        Args:
+            callback: Function to call when settings is clicked.
+        """
+        self.on_settings = callback
+
+    def update_theme(self, theme: str) -> None:
+        """
+        Update the sidebar theme colors.
+
+        Args:
+            theme: Theme name ("dark", "light", or "system")
+        """
+        if theme == "light":
+            surface_color = "#f5f5f5"
+            bg_color = "#ffffff"
+            text_color = "#1a1a1a"
+            secondary_text = "#666666"
+            hover_color = "#e0e0e0"
+        else:
+            surface_color = "#2d2d2d"
+            bg_color = "#1a1a1a"
+            text_color = "#e0e0e0"
+            secondary_text = "#a0a0a0"
+            hover_color = "#3d3d3d"
+
+        # Most widgets use color tuples and update automatically via set_appearance_mode()
+        # No need to manually update sidebar, labels, buttons, etc.
+
+        # Update all conversation buttons
+        for conv_id, btn in self.conversation_buttons.items():
+            is_current = (conv_id == self.current_conversation_id)
+            if is_current:
+                btn.configure(fg_color="#4a9eff", hover_color="#3d8ee6")
+            else:
+                btn.configure(fg_color="transparent", hover_color=hover_color)

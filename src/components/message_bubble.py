@@ -13,6 +13,7 @@ class MessageBubble(ctk.CTkFrame):
         parent,
         role: Literal["user", "assistant", "system"],
         content: str,
+        font_size: int = 14,
         **kwargs,
     ):
         """
@@ -22,39 +23,46 @@ class MessageBubble(ctk.CTkFrame):
             parent: Parent widget.
             role: Message role (user, assistant, or system).
             content: Message content text.
+            font_size: Font size for the message text (default: 14).
             **kwargs: Additional arguments for CTkFrame.
         """
         super().__init__(parent, **kwargs)
 
         self.role = role
         self.content = content
+        self.font_size = font_size
 
         self._setup_ui()
 
     def _setup_ui(self) -> None:
         """Set up the message bubble UI."""
-        # Configure frame
+        # Configure frame with theme-aware colors
         if self.role == "user":
-            fg_color = "#4a9eff"  # Primary blue for user
-            text_color = "#ffffff"
+            fg_color = ("#2196f3", "#4a9eff")  # Primary blue for user (light, dark)
+            text_color = ("#ffffff", "#ffffff")  # White text in both themes
             anchor = "e"  # Right align
         elif self.role == "assistant":
-            fg_color = "#2d2d2d"  # Surface color for assistant
-            text_color = "#e0e0e0"
+            fg_color = ("#f5f5f5", "#2d2d2d")  # Surface color for assistant (light, dark)
+            text_color = ("#1a1a1a", "#e0e0e0")  # Text color (light, dark)
             anchor = "w"  # Left align
         else:  # system
-            fg_color = "#3d3d3d"
-            text_color = "#fff066"
+            fg_color = ("#ffa33b", "#3d3d3d")  # Yellow/dark for system (light, dark)
+            text_color = ("#1a1a1a", "#ffb96a")  # Text color (light, dark)
             anchor = "w"
 
         self.configure(fg_color=fg_color, corner_radius=10)
 
         # Role label (small text above message)
+        label_color = text_color
+
+        # Calculate role label font size (smaller than content)
+        label_font_size = max(11, self.font_size - 3)
+
         role_label = ctk.CTkLabel(
             self,
             text=self.role.capitalize(),
-            font=("", 11),
-            text_color=text_color if self.role != "user" else "#b0d4ff",
+            font=("", label_font_size),
+            text_color=label_color,
             anchor=anchor,
         )
         role_label.pack(pady=(8, 2), padx=12, anchor=anchor, fill="x")
@@ -62,7 +70,7 @@ class MessageBubble(ctk.CTkFrame):
         # Message content
         content_label = ctk.CTkTextbox(
             self,
-            font=("", 14),
+            font=("", self.font_size),
             fg_color=fg_color,
             text_color=text_color,
             wrap="word",
@@ -71,12 +79,13 @@ class MessageBubble(ctk.CTkFrame):
         content_label.insert("1.0", self.content)
         content_label.configure(state="disabled")  # Read-only
 
-        # Calculate height based on content
+        # Calculate height based on content and font size
         num_lines = self.content.count("\n") + 1
-        # Estimate line wrapping (rough approximation)
-        chars_per_line = 60
+        # Estimate line wrapping (adjust for font size)
+        chars_per_line = int(60 * (14 / self.font_size))
         estimated_lines = max(num_lines, len(self.content) // chars_per_line + 1)
-        height = min(max(estimated_lines * 20, 40), 400)  # Between 40 and 400px
+        line_height = int(20 * (self.font_size / 14))
+        height = min(max(estimated_lines * line_height, 40), 400)  # Between 40 and 400px
 
         content_label.pack(pady=(0, 8), padx=12, fill="both", expand=True)
         content_label.configure(height=height)
@@ -104,3 +113,29 @@ class MessageBubble(ctk.CTkFrame):
                 height = min(max(estimated_lines * 20, 40), 400)
                 widget.configure(height=height)
                 break
+
+    def update_font_size(self, font_size: int) -> None:
+        """
+        Update the font size of the message bubble.
+
+        Args:
+            font_size: New font size in pixels
+        """
+        # Update all text widgets
+        for widget in self.winfo_children():
+            if isinstance(widget, ctk.CTkTextbox):
+                # Update content textbox
+                widget.configure(font=("", font_size))
+
+                # Recalculate height based on new font size
+                num_lines = self.content.count("\n") + 1
+                chars_per_line = int(60 * (14 / font_size))  # Adjust for font size
+                estimated_lines = max(num_lines, len(self.content) // chars_per_line + 1)
+                line_height = int(20 * (font_size / 14))  # Scale line height
+                height = min(max(estimated_lines * line_height, 40), 400)
+                widget.configure(height=height)
+
+            elif isinstance(widget, ctk.CTkLabel):
+                # Update role label (keep it smaller than content)
+                label_size = max(11, font_size - 3)
+                widget.configure(font=("", label_size))

@@ -32,7 +32,7 @@ class InputPanel(ctk.CTkFrame):
     def _setup_ui(self) -> None:
         """Set up the input panel UI."""
         self.configure(
-            fg_color="#2d2d2d",
+            fg_color=("#f5f5f5", "#2d2d2d"),  # (light, dark)
             corner_radius=0,
             height=120,
         )
@@ -45,9 +45,10 @@ class InputPanel(ctk.CTkFrame):
         self.input_text = ctk.CTkTextbox(
             inner_frame,
             font=("", 14),
-            fg_color="#1a1a1a",
+            fg_color=("#ffffff", "#1a1a1a"),  # (light, dark)
+            text_color=("#1a1a1a", "#e0e0e0"),  # (light, dark)
             border_width=1,
-            border_color="#4a9eff",
+            border_color=("#2196f3", "#4a9eff"),  # (light, dark)
             wrap="word",
             height=60,
         )
@@ -68,8 +69,8 @@ class InputPanel(ctk.CTkFrame):
             text="Send",
             command=self._handle_send,
             font=("", 14, "bold"),
-            fg_color="#4a9eff",
-            hover_color="#3d8ee6",
+            fg_color=("#2196f3", "#4a9eff"),  # (light, dark)
+            hover_color=("#1976d2", "#3d8ee6"),
             width=100,
             height=40,
         )
@@ -81,8 +82,8 @@ class InputPanel(ctk.CTkFrame):
             text="Stop",
             command=self._handle_stop,
             font=("", 14),
-            fg_color="#e74c3c",
-            hover_color="#c0392b",
+            fg_color=("#f27a6c", "#e74c3c"),  # (light, dark)
+            hover_color=("#e74c3c", "#c0392b"),
             width=100,
             height=40,
         )
@@ -90,19 +91,19 @@ class InputPanel(ctk.CTkFrame):
 
     def _setup_placeholder(self) -> None:
         """Set up placeholder text behavior."""
-        placeholder = "Type your message... (Shift+Enter for new line)"
-        self.input_text.insert("1.0", placeholder)
-        self.input_text.configure(text_color="#666666")
+        self.placeholder = "Type your message... (Shift+Enter for new line)"
+        self.input_text.insert("1.0", self.placeholder)
+        self.input_text.configure(text_color=("#999999", "#666666"))  # Placeholder color (light, dark)
 
         def on_focus_in(event):
-            if self.input_text.get("1.0", "end-1c") == placeholder:
+            if self.input_text.get("1.0", "end-1c") == self.placeholder:
                 self.input_text.delete("1.0", "end")
-                self.input_text.configure(text_color="#e0e0e0")
+                self.input_text.configure(text_color=("#1a1a1a", "#e0e0e0"))  # Normal text color
 
         def on_focus_out(event):
             if not self.input_text.get("1.0", "end-1c").strip():
-                self.input_text.insert("1.0", placeholder)
-                self.input_text.configure(text_color="#666666")
+                self.input_text.insert("1.0", self.placeholder)
+                self.input_text.configure(text_color=("#999999", "#666666"))  # Placeholder color
 
         self.input_text.bind("<FocusIn>", on_focus_in)
         self.input_text.bind("<FocusOut>", on_focus_out)
@@ -202,3 +203,22 @@ class InputPanel(ctk.CTkFrame):
     def focus_input(self) -> None:
         """Set focus to the input text area."""
         self.input_text.focus()
+
+    def update_theme(self, theme: str) -> None:
+        """
+        Update the input panel theme colors.
+
+        Args:
+            theme: Theme name ("dark", "light", or "system")
+        """
+        if theme == "light":
+            surface_color = "#f5f5f5"
+            bg_color = "#ffffff"
+            text_color = "#1a1a1a"
+        else:
+            surface_color = "#2d2d2d"
+            bg_color = "#1a1a1a"
+            text_color = "#e0e0e0"
+
+        self.configure(fg_color=surface_color)
+        self.input_text.configure(fg_color=bg_color, text_color=text_color)

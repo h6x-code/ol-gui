@@ -10,25 +10,27 @@ from models.message import Message
 class ChatPanel(ctk.CTkScrollableFrame):
     """Scrollable panel for displaying chat messages."""
 
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, font_size: int = 14, **kwargs):
         """
         Initialize the chat panel.
 
         Args:
             parent: Parent widget.
+            font_size: Default font size for messages.
             **kwargs: Additional arguments for CTkScrollableFrame.
         """
         super().__init__(parent, **kwargs)
 
         self.message_widgets: List[MessageBubble] = []
         self._current_streaming_bubble: Optional[MessageBubble] = None
+        self.font_size = font_size
 
         self._setup_ui()
 
     def _setup_ui(self) -> None:
         """Set up the chat panel UI."""
         self.configure(
-            fg_color="#1a1a1a",
+            fg_color=("#ffffff", "#1a1a1a"),  # (light, dark)
             corner_radius=0,
         )
 
@@ -44,7 +46,7 @@ class ChatPanel(ctk.CTkScrollableFrame):
             welcome_frame,
             text="Ol-GUI",
             font=("", 32, "bold"),
-            text_color="#4a9eff",
+            text_color=("#2196f3", "#4a9eff"),  # (light, dark)
         )
         title.pack(pady=(0, 10))
 
@@ -52,7 +54,7 @@ class ChatPanel(ctk.CTkScrollableFrame):
             welcome_frame,
             text="Start a conversation with your local LLM",
             font=("", 14),
-            text_color="#a0a0a0",
+            text_color=("#666666", "#a0a0a0"),  # (light, dark)
         )
         subtitle.pack()
 
@@ -71,11 +73,12 @@ class ChatPanel(ctk.CTkScrollableFrame):
             for widget in self.winfo_children():
                 widget.destroy()
 
-        # Create message bubble
+        # Create message bubble with current font size
         bubble = MessageBubble(
             self,
             role=message.role,
             content=message.content,
+            font_size=self.font_size,
         )
 
         # Pack with appropriate alignment
@@ -158,3 +161,17 @@ class ChatPanel(ctk.CTkScrollableFrame):
         """Scroll the chat panel to the bottom."""
         # This is a workaround for CTkScrollableFrame
         self._parent_canvas.yview_moveto(1.0)
+
+    def update_theme(self, theme: str) -> None:
+        """
+        Update the chat panel theme colors.
+
+        Args:
+            theme: Theme name ("dark", "light", or "system")
+        """
+        if theme == "light":
+            bg_color = "#ffffff"
+        else:
+            bg_color = "#1a1a1a"
+
+        self.configure(fg_color=bg_color)

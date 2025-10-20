@@ -39,6 +39,10 @@ class OllamaGUI(ctk.CTk):
         # Setup UI
         self._setup_ui()
 
+        # Apply saved font size
+        font_size = self.settings.get("font_size", 14)
+        self._apply_font_size(font_size)
+
         # Load initial data
         self._load_initial_data()
 
@@ -78,9 +82,11 @@ class OllamaGUI(ctk.CTk):
         )
         self.sidebar.grid(row=0, column=0, rowspan=2, sticky="nsew")
         self.sidebar.set_refresh_models_callback(self._refresh_models)
+        self.sidebar.set_settings_callback(self._on_settings)
 
-        # Chat panel
-        self.chat_panel = ChatPanel(self)
+        # Chat panel (with saved font size)
+        font_size = self.settings.get("font_size", 14)
+        self.chat_panel = ChatPanel(self, font_size=font_size)
         self.chat_panel.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
 
         # Input panel
@@ -150,6 +156,10 @@ class OllamaGUI(ctk.CTk):
         Args:
             model_name: Selected model name.
         """
+        # Unload previous model from VRAM before switching
+        if self.current_model and self.current_model != model_name:
+            self.ollama.cleanup(self.current_model)
+
         self.current_model = model_name
         self.settings.set("last_model", model_name)
 
@@ -190,6 +200,10 @@ class OllamaGUI(ctk.CTk):
             conv = self.conv_manager.get_conversation(conv_id)
 
             if conv:
+                # Unload previous model if switching to a different one
+                if self.current_model and self.current_model != conv.model:
+                    self.ollama.cleanup(self.current_model)
+
                 self.current_conversation = conv
                 self.current_model = conv.model
 
@@ -231,14 +245,48 @@ class OllamaGUI(ctk.CTk):
         if not message_text.strip() or self.is_generating:
             return
 
+        # Hidden commands
+        command = message_text.strip().lower()
+
+        if command == "/test-system":
+            # Test system message colors
+            system_message = Message(role="system", content="This is a test system message. System messages are used for errors and notifications.")
+            self.chat_panel.add_message(system_message)
+            return
+
+        elif command == "/bye" or command == "/quit" or command == "/exit":
+            # Quit the application
+            system_message = Message(role="system", content="Goodbye! Closing application...")
+            self.chat_panel.add_message(system_message)
+            self.after(1000, self._on_closing)  # Close after 1 second
+            return
+
+        elif command == "/clear":
+            # Clear current conversation
+            self.chat_panel.clear_messages()
+            system_message = Message(role="system", content="Conversation cleared.")
+            self.chat_panel.add_message(system_message)
+            return
+
+        elif command == "/help":
+            # Show help message
+            help_text = """Available hidden commands:
+/help - Show this help message
+/test-system - Test system message colors
+/clear - Clear current conversation
+/bye, /quit, /exit - Close the application"""
+            system_message = Message(role="system", content=help_text)
+            self.chat_panel.add_message(system_message)
+            return
+
         # Create user message
         user_message = Message(role="user", content=message_text)
 
         # Add to UI
         self.chat_panel.add_message(user_message)
 
-        # Save to database
-        if self.current_conversation:
+        # Save to database (if auto-save enabled)
+        if self.current_conversation and self.settings.get("auto_save", True):
             self.conv_manager.add_message(
                 self.current_conversation.id,
                 "user",
@@ -276,27 +324,48 @@ class OllamaGUI(ctk.CTk):
                 if conv:
                     messages = conv.get_message_history()
 
-            # Stream response
+            # Get response (streaming or non-streaming based on setting)
             full_response = ""
-            response_stream = self.ollama.send_message(
-                self.current_model,
-                messages,
-                stream=True
-            )
+            use_streaming = self.settings.get("stream_responses", True)
 
-            for chunk in response_stream:
-                if self._stop_generation:
-                    break
+            if use_streaming:
+                # Streaming mode
+                response_stream = self.ollama.send_message(
+                    self.current_model,
+                    messages,
+                    stream=True
+                )
 
-                full_response += chunk
-                # Update UI in main thread
-                self.after(0, lambda r=full_response: self.chat_panel.update_streaming_message(r))
+                for chunk in response_stream:
+                    if self._stop_generation:
+                        break
 
-            # Finish streaming
-            self.after(0, lambda: self.chat_panel.finish_streaming_message())
+                    full_response += chunk
+                    # Update UI in main thread
+                    self.after(0, lambda r=full_response: self.chat_panel.update_streaming_message(r))
 
-            # Save assistant message to database
-            if self.current_conversation and full_response:
+                # Finish streaming
+                self.after(0, lambda: self.chat_panel.finish_streaming_message())
+            else:
+                # Non-streaming mode - get full response at once
+                response = self.ollama.send_message(
+                    self.current_model,
+                    messages,
+                    stream=False
+                )
+
+                # Response is a ChatResponse object with message attribute
+                if hasattr(response, 'message'):
+                    full_response = response.message.content if response.message else ""
+                elif isinstance(response, dict) and 'message' in response:
+                    full_response = response['message'].get('content', '')
+
+                # Add the complete message to UI
+                assistant_message = Message(role="assistant", content=full_response)
+                self.after(0, lambda: self.chat_panel.add_message(assistant_message))
+
+            # Save assistant message to database (if auto-save enabled)
+            if self.current_conversation and full_response and self.settings.get("auto_save", True):
                 self.conv_manager.add_message(
                     self.current_conversation.id,
                     "assistant",
@@ -319,6 +388,61 @@ class OllamaGUI(ctk.CTk):
     def _stop_generation_callback(self) -> None:
         """Stop the current generation."""
         self._stop_generation = True
+
+    def _on_settings(self) -> None:
+        """Open the settings dialog."""
+        from components.settings_dialog import SettingsDialog
+
+        dialog = SettingsDialog(
+            self,
+            self.settings,
+            on_save=self._on_settings_saved
+        )
+
+    def _on_settings_saved(self) -> None:
+        """Handle settings being saved."""
+        # Apply theme change
+        theme = self.settings.get("theme", "dark")
+        ctk.set_appearance_mode(theme)
+
+        # Update all components with new theme colors
+        self._apply_theme_colors(theme)
+
+        # Apply font size changes
+        font_size = self.settings.get("font_size", 14)
+        self._apply_font_size(font_size)
+
+    def _apply_theme_colors(self, theme: str) -> None:
+        """
+        Apply theme colors to all components.
+
+        Args:
+            theme: Theme name ("dark", "light", or "system")
+        """
+        # Update all components
+        self.sidebar.update_theme(theme)
+        self.chat_panel.update_theme(theme)
+        self.input_panel.update_theme(theme)
+
+    def _apply_font_size(self, font_size: int) -> None:
+        """
+        Apply font size to all components.
+
+        Args:
+            font_size: Font size in pixels
+        """
+        # Update input panel text box
+        if hasattr(self.input_panel, 'input_text'):
+            self.input_panel.input_text.configure(font=("", font_size))
+
+        # Update chat panel font size (for new messages)
+        if hasattr(self.chat_panel, 'font_size'):
+            self.chat_panel.font_size = font_size
+
+        # Update existing message bubbles
+        if hasattr(self.chat_panel, 'message_widgets'):
+            for bubble in self.chat_panel.message_widgets:
+                bubble.update_font_size(font_size)
 
     def _on_closing(self) -> None:
         """Handle window closing event."""
