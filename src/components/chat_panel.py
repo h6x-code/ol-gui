@@ -31,6 +31,9 @@ class ChatPanel(ctk.CTkScrollableFrame):
         # Bind to configure event to resize message bubbles
         self.bind("<Configure>", self._on_resize)
 
+        # Bind mouse wheel scrolling
+        self._bind_mouse_wheel()
+
     def _setup_ui(self) -> None:
         """Set up the chat panel UI."""
         self.configure(
@@ -108,6 +111,11 @@ class ChatPanel(ctk.CTkScrollableFrame):
 
         self.message_widgets.append(bubble)
 
+        # Force update of the scrollable frame's canvas
+        self.update_idletasks()
+        if hasattr(self, '_parent_canvas'):
+            self._parent_canvas.configure(scrollregion=self._parent_canvas.bbox("all"))
+
         # Scroll to bottom
         self.after(100, self._scroll_to_bottom)
 
@@ -137,6 +145,10 @@ class ChatPanel(ctk.CTkScrollableFrame):
         """
         if self._current_streaming_bubble:
             self._current_streaming_bubble.update_content(content)
+            # Update canvas scroll region as content grows
+            self.update_idletasks()
+            if hasattr(self, '_parent_canvas'):
+                self._parent_canvas.configure(scrollregion=self._parent_canvas.bbox("all"))
             self.after(50, self._scroll_to_bottom)
 
     def finish_streaming_message(self) -> None:
@@ -168,8 +180,15 @@ class ChatPanel(ctk.CTkScrollableFrame):
 
     def _scroll_to_bottom(self) -> None:
         """Scroll the chat panel to the bottom."""
-        # This is a workaround for CTkScrollableFrame
-        self._parent_canvas.yview_moveto(1.0)
+        # Access the internal canvas and scroll to bottom
+        try:
+            # CTkScrollableFrame has an internal canvas widget
+            if hasattr(self, '_parent_canvas'):
+                self._parent_canvas.yview_moveto(1.0)
+            # Force update to ensure scrolling works
+            self.update_idletasks()
+        except Exception as e:
+            print(f"Scroll error: {e}")
 
     def update_theme(self, theme: str) -> None:
         """
@@ -200,3 +219,40 @@ class ChatPanel(ctk.CTkScrollableFrame):
         for bubble in self.message_widgets:
             if hasattr(bubble, '_calculate_height'):
                 bubble._calculate_height()
+
+    def _bind_mouse_wheel(self) -> None:
+        """Bind mouse wheel events for scrolling when mouse enters this widget."""
+        # Bind mouse wheel only when mouse is over this widget
+        self.bind("<Enter>", self._on_mouse_enter)
+        self.bind("<Leave>", self._on_mouse_leave)
+
+    def _on_mouse_enter(self, event) -> None:
+        """Enable mouse wheel scrolling when mouse enters the chat panel."""
+        if hasattr(self, '_parent_canvas'):
+            # Linux scroll (Button-4/5)
+            self._parent_canvas.bind_all("<Button-4>", self._on_mouse_wheel)
+            self._parent_canvas.bind_all("<Button-5>", self._on_mouse_wheel)
+
+    def _on_mouse_leave(self, event) -> None:
+        """Disable mouse wheel scrolling when mouse leaves the chat panel."""
+        if hasattr(self, '_parent_canvas'):
+            # Unbind mouse wheel events
+            self._parent_canvas.unbind_all("<Button-4>")
+            self._parent_canvas.unbind_all("<Button-5>")
+
+    def _on_mouse_wheel(self, event) -> None:
+        """
+        Handle mouse wheel scrolling.
+
+        Args:
+            event: Mouse wheel event.
+        """
+        if hasattr(self, '_parent_canvas'):
+            # Linux uses Button-4 (scroll up) and Button-5 (scroll down)
+            if event.num == 4:
+                self._parent_canvas.yview_scroll(-1, "units")
+            elif event.num == 5:
+                self._parent_canvas.yview_scroll(1, "units")
+            # Windows/Mac use event.delta
+            elif hasattr(event, 'delta'):
+                self._parent_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")

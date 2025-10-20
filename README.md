@@ -56,7 +56,7 @@ Run the application:
 ```bash
 python src/main.py
 # or
-./run.sh
+./run.sh    # Preferred
 ```
 
 ### Hidden Commands

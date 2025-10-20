@@ -124,6 +124,9 @@ class Sidebar(ctk.CTkFrame):
         )
         self.conversations_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
+        # Bind mouse wheel scrolling for conversations frame
+        self._bind_conversations_mouse_wheel()
+
         # Settings button at bottom
         self.settings_btn = ctk.CTkButton(
             self,
@@ -509,3 +512,40 @@ class Sidebar(ctk.CTkFrame):
         # Update conversation buttons
         for btn in self.conversation_buttons.values():
             btn.configure(font=("", max(10, font_size - 3)))
+
+    def _bind_conversations_mouse_wheel(self) -> None:
+        """Bind mouse wheel events for scrolling when mouse enters conversations frame."""
+        # Bind mouse wheel only when mouse is over this widget
+        self.conversations_frame.bind("<Enter>", self._on_conversations_mouse_enter)
+        self.conversations_frame.bind("<Leave>", self._on_conversations_mouse_leave)
+
+    def _on_conversations_mouse_enter(self, event) -> None:
+        """Enable mouse wheel scrolling when mouse enters the conversations frame."""
+        if hasattr(self.conversations_frame, '_parent_canvas'):
+            # Linux scroll (Button-4/5)
+            self.conversations_frame._parent_canvas.bind_all("<Button-4>", self._on_conversations_mouse_wheel)
+            self.conversations_frame._parent_canvas.bind_all("<Button-5>", self._on_conversations_mouse_wheel)
+
+    def _on_conversations_mouse_leave(self, event) -> None:
+        """Disable mouse wheel scrolling when mouse leaves the conversations frame."""
+        if hasattr(self.conversations_frame, '_parent_canvas'):
+            # Unbind mouse wheel events
+            self.conversations_frame._parent_canvas.unbind_all("<Button-4>")
+            self.conversations_frame._parent_canvas.unbind_all("<Button-5>")
+
+    def _on_conversations_mouse_wheel(self, event) -> None:
+        """
+        Handle mouse wheel scrolling for conversations frame.
+
+        Args:
+            event: Mouse wheel event.
+        """
+        if hasattr(self.conversations_frame, '_parent_canvas'):
+            # Linux uses Button-4 (scroll up) and Button-5 (scroll down)
+            if event.num == 4:
+                self.conversations_frame._parent_canvas.yview_scroll(-1, "units")
+            elif event.num == 5:
+                self.conversations_frame._parent_canvas.yview_scroll(1, "units")
+            # Windows/Mac use event.delta
+            elif hasattr(event, 'delta'):
+                self.conversations_frame._parent_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")

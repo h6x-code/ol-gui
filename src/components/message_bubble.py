@@ -58,14 +58,14 @@ class MessageBubble(ctk.CTkFrame):
         # Calculate role label font size (8 points larger than content)
         label_font_size = max(11, self.font_size - 3)
 
-        role_label = ctk.CTkLabel(
+        self.role_label = ctk.CTkLabel(
             self,
             text=self.role.capitalize(),
             font=("", label_font_size),
             text_color=label_color,
             anchor=anchor,
         )
-        role_label.pack(pady=(8, 2), padx=12, anchor=anchor, fill="x")
+        self.role_label.pack(pady=(8, 2), padx=12, anchor=anchor, fill="x")
 
         # Message content
         self.content_label = ctk.CTkTextbox(
@@ -74,13 +74,13 @@ class MessageBubble(ctk.CTkFrame):
             fg_color=fg_color,
             text_color=text_color,
             wrap="word",
-            activate_scrollbars=True,
+            activate_scrollbars=True,  # Enable scrollbars for long messages
         )
         self.content_label.insert("1.0", self.content)
         self.content_label.configure(state="disabled")  # Read-only
 
-        # Pack first to get accurate measurements
-        self.content_label.pack(pady=(0, 8), padx=12, fill="both", expand=True)
+        # Pack without expand to allow proper height calculation
+        self.content_label.pack(pady=(0, 8), padx=12, fill="x", expand=False)
 
         # Calculate dynamic height based on actual content
         self._calculate_height()
