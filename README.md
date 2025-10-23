@@ -29,6 +29,30 @@ A sleek, minimalist GUI for [Ollama](https://ollama.ai) - interact with local LL
 
 ## Installation
 
+### Quick Setup (Recommended)
+
+1. Clone the repository:
+```bash
+git clone https://github.com/h6x-code/ol-gui.git
+cd ol-gui
+```
+
+2. Run the setup script:
+```bash
+./setup.sh
+```
+
+The setup script will:
+- Check for Python 3.10+ and tkinter
+- Optionally create a virtual environment
+- Install all dependencies
+- Configure and install the desktop entry with correct paths
+- Check if Ollama is installed and running
+
+### Manual Setup
+
+If you prefer manual installation:
+
 1. Clone the repository:
 ```bash
 git clone https://github.com/h6x-code/ol-gui.git
@@ -37,11 +61,13 @@ cd ol-gui
 
 2. Install dependencies:
 ```bash
+sudo apt install python3-tk       # skip if tkinter is already installed
 pip install -r requirements.txt
 ```
 
-3. Copy `.desktop` for local installation:
+3. Update the `.desktop` file with your repo path and copy it:
 ```bash
+# Edit ol-gui.desktop to set correct Exec and Icon paths
 cp ol-gui.desktop ~/.local/share/applications/
 ```
 
@@ -128,12 +154,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Future Enhancements
 
 ### Next
-- [ ] **Theme Customization:** Custom color schemes, multiple built-in themes
-- [ ] **Export Conversations:** Export to Markdown, JSON, or plain text
-- [ ] **System Prompts:** Custom system prompts per conversation
-- [ ] **Model Parameters:** Temperature, top_p, top_k, max_tokens adjustments
-- [ ] **Search:** Search through conversation history
-- [ ] **Keyboard Shortcuts:** Comprehensive keyboard navigation
+- [x] **Theme Customization:** Custom color schemes, multiple built-in themes
+- [x] **Export Conversations:** Export to Markdown, JSON, or plain text
+- [x] **System Prompts:** Custom system prompts per conversation
+- [x] **Model Parameters:** Temperature, top_p, top_k, max_tokens adjustments
+- [x] **Keyboard Shortcuts:** Comprehensive keyboard navigation
 
 ### Soon
 - [ ] **Conversation Templates:** Saved prompt templates
@@ -143,6 +168,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - [ ] **Syntax Highlighting:** Code block detection and highlighting in messages
 
 ### In Due Time
+- [ ] **Search:** Search through conversation history
+  - Note: Search output currently prints to terminal as placeholder.
 - [ ] **Image Support:** If Ollama adds vision model support
 - [ ] **Voice Input:** Speech-to-text integration
 - [ ] **Collaborative Features:** Share conversations with others

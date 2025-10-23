@@ -2,21 +2,23 @@
 Chat display panel component.
 """
 import customtkinter as ctk
-from typing import List, Optional
+from typing import List, Optional, Dict
 from components.message_bubble import MessageBubble
 from models.message import Message
+from utils.config import get_theme_colors
 
 
 class ChatPanel(ctk.CTkScrollableFrame):
     """Scrollable panel for displaying chat messages."""
 
-    def __init__(self, parent, font_size: int = 14, **kwargs):
+    def __init__(self, parent, font_size: int = 14, theme_colors: Optional[Dict[str, str]] = None, **kwargs):
         """
         Initialize the chat panel.
 
         Args:
             parent: Parent widget.
             font_size: Default font size for messages.
+            theme_colors: Optional theme color dictionary. Defaults to dark theme.
             **kwargs: Additional arguments for CTkScrollableFrame.
         """
         super().__init__(parent, **kwargs)
@@ -24,6 +26,7 @@ class ChatPanel(ctk.CTkScrollableFrame):
         self.message_widgets: List[MessageBubble] = []
         self._current_streaming_bubble: Optional[MessageBubble] = None
         self.font_size = font_size
+        self.theme_colors = theme_colors or get_theme_colors("dark")
         self._welcome_frame: Optional[ctk.CTkFrame] = None
 
         self._setup_ui()
@@ -37,7 +40,7 @@ class ChatPanel(ctk.CTkScrollableFrame):
     def _setup_ui(self) -> None:
         """Set up the chat panel UI."""
         self.configure(
-            fg_color=("#ffffff", "#1a1a1a"),  # (light, dark)
+            fg_color=self.theme_colors["background"],
             corner_radius=0,
         )
 
@@ -57,7 +60,7 @@ class ChatPanel(ctk.CTkScrollableFrame):
             self._welcome_frame,
             text="OL-GUI",
             font=("", 48, "bold"),
-            text_color=("#2196f3", "#4a9eff"),  # (light, dark)
+            text_color=self.theme_colors["primary"],
         )
         title.pack(pady=(0, 10))
 
@@ -65,7 +68,7 @@ class ChatPanel(ctk.CTkScrollableFrame):
             self._welcome_frame,
             text="Start a conversation with your local LLM",
             font=("", 24),
-            text_color=("#666666", "#a0a0a0"),  # (light, dark)
+            text_color=self.theme_colors["text_secondary"],
         )
         subtitle.pack()
 
@@ -85,12 +88,13 @@ class ChatPanel(ctk.CTkScrollableFrame):
                 self._welcome_frame.destroy()
                 self._welcome_frame = None
 
-        # Create message bubble with current font size
+        # Create message bubble with current font size and theme colors
         bubble = MessageBubble(
             self,
             role=message.role,
             content=message.content,
             font_size=self.font_size,
+            theme_colors=self.theme_colors,
         )
 
         # Pack with appropriate alignment
@@ -115,13 +119,16 @@ class ChatPanel(ctk.CTkScrollableFrame):
         self.update_idletasks()
 
         # Refresh the bubble height after it's been packed and geometry is available
-        self.after(50, bubble.refresh_height)
+        # Use multiple passes to ensure accurate sizing after wrapping occurs
+        self.after(50, bubble.refresh_height)   # First pass after initial layout
+        self.after(150, bubble.refresh_height)  # Second pass after text wrapping
+        self.after(250, bubble.refresh_height)  # Third pass for final accuracy
 
         # Update scroll region after bubble height is refreshed
-        self.after(100, self._update_scroll_region)
+        self.after(300, self._update_scroll_region)
 
         # Scroll to bottom
-        self.after(150, self._scroll_to_bottom)
+        self.after(350, self._scroll_to_bottom)
 
         return bubble
 
@@ -196,19 +203,31 @@ class ChatPanel(ctk.CTkScrollableFrame):
         except Exception as e:
             print(f"Scroll error: {e}")
 
-    def update_theme(self, theme: str) -> None:
+    def update_theme(self, theme_colors: Dict[str, str]) -> None:
         """
         Update the chat panel theme colors.
 
         Args:
-            theme: Theme name ("dark", "light", or "system")
+            theme_colors: Dictionary of theme colors from config
         """
-        if theme == "light":
-            bg_color = "#ffffff"
-        else:
-            bg_color = "#1a1a1a"
+        self.theme_colors = theme_colors
 
-        self.configure(fg_color=bg_color)
+        # Update background color
+        self.configure(fg_color=theme_colors["background"])
+
+        # Update welcome message if it exists
+        if self._welcome_frame is not None and self._welcome_frame.winfo_exists():
+            for widget in self._welcome_frame.winfo_children():
+                if isinstance(widget, ctk.CTkLabel):
+                    if "OL-GUI" in widget.cget("text"):
+                        widget.configure(text_color=theme_colors["primary"])
+                    else:
+                        widget.configure(text_color=theme_colors["text_secondary"])
+
+        # Update all existing message bubbles with new theme colors
+        for bubble in self.message_widgets:
+            if hasattr(bubble, 'update_theme_colors'):
+                bubble.update_theme_colors(theme_colors)
 
     def _on_resize(self, event) -> None:
         """Handle resize events to recalculate all message bubble heights."""
@@ -218,7 +237,8 @@ class ChatPanel(ctk.CTkScrollableFrame):
             # Debounce resize events to avoid too many updates
             if hasattr(self, '_resize_timer'):
                 self.after_cancel(self._resize_timer)
-            self._resize_timer = self.after(100, self._recalculate_all_heights)
+            # Use longer delay to allow geometry to stabilize
+            self._resize_timer = self.after(150, self._recalculate_all_heights)
 
     def _recalculate_all_heights(self) -> None:
         """Recalculate heights for all message bubbles."""
@@ -226,8 +246,17 @@ class ChatPanel(ctk.CTkScrollableFrame):
             if hasattr(bubble, 'refresh_height'):
                 bubble.refresh_height()
 
+        # Second pass to ensure accurate sizing after text wrapping settles
+        self.after(100, self._second_pass_recalculation)
+
         # Update scroll region after recalculating heights
-        self.after(50, self._update_scroll_region)
+        self.after(150, self._update_scroll_region)
+
+    def _second_pass_recalculation(self) -> None:
+        """Second pass height recalculation for accuracy."""
+        for bubble in self.message_widgets:
+            if hasattr(bubble, 'refresh_height'):
+                bubble.refresh_height()
 
     def _update_scroll_region(self) -> None:
         """Update the scroll region to fit the actual content size."""

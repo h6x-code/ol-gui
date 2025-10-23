@@ -2,7 +2,8 @@
 Message input panel component.
 """
 import customtkinter as ctk
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict
+from utils.config import get_theme_colors
 
 
 class InputPanel(ctk.CTkFrame):
@@ -12,6 +13,7 @@ class InputPanel(ctk.CTkFrame):
         self,
         parent,
         on_send: Optional[Callable[[str], None]] = None,
+        theme_colors: Optional[Dict[str, str]] = None,
         **kwargs,
     ):
         """
@@ -20,19 +22,21 @@ class InputPanel(ctk.CTkFrame):
         Args:
             parent: Parent widget.
             on_send: Callback function when message is sent.
+            theme_colors: Optional theme color dictionary. Defaults to dark theme.
             **kwargs: Additional arguments for CTkFrame.
         """
         super().__init__(parent, **kwargs)
 
         self.on_send = on_send
         self._is_sending = False
+        self.theme_colors = theme_colors or get_theme_colors("dark")
 
         self._setup_ui()
 
     def _setup_ui(self) -> None:
         """Set up the input panel UI."""
         self.configure(
-            fg_color=("#f5f5f5", "#2d2d2d"),  # (light, dark)
+            fg_color=self.theme_colors["surface"],
             corner_radius=0,
             height=240,
         )
@@ -45,10 +49,10 @@ class InputPanel(ctk.CTkFrame):
         self.input_text = ctk.CTkTextbox(
             inner_frame,
             font=("", 14),
-            fg_color=("#ffffff", "#1a1a1a"),  # (light, dark)
-            text_color=("#1a1a1a", "#e0e0e0"),  # (light, dark)
+            fg_color=self.theme_colors["background"],
+            text_color=self.theme_colors["text"],
             border_width=1,
-            border_color=("#2196f3", "#4a9eff"),  # (light, dark)
+            border_color=self.theme_colors["primary"],
             wrap="word",
             height=180,
         )
@@ -69,8 +73,8 @@ class InputPanel(ctk.CTkFrame):
             text="Send",
             command=self._handle_send,
             font=("", 24, "bold"),
-            fg_color=("#2196f3", "#4a9eff"),  # (light, dark)
-            hover_color=("#1976d2", "#3d8ee6"),
+            fg_color=self.theme_colors["primary"],
+            hover_color=self.theme_colors["primary_hover"],
             width=100,
             height=60,
         )
@@ -82,7 +86,7 @@ class InputPanel(ctk.CTkFrame):
             text="Stop",
             command=self._handle_stop,
             font=("", 14),
-            fg_color=("#f27a6c", "#e74c3c"),  # (light, dark)
+            fg_color=("#f27a6c", "#e74c3c"),  # Red for stop button (light, dark)
             hover_color=("#e74c3c", "#c0392b"),
             width=100,
             height=40,
@@ -93,17 +97,20 @@ class InputPanel(ctk.CTkFrame):
         """Set up placeholder text behavior."""
         self.placeholder = "Type your message... (Shift+Enter for new line)"
         self.input_text.insert("1.0", self.placeholder)
-        self.input_text.configure(text_color=("#999999", "#666666"))  # Placeholder color (light, dark)
+
+        # Placeholder color - dimmed version of text_secondary
+        placeholder_color = self.theme_colors["text_secondary"]
+        self.input_text.configure(text_color=placeholder_color)
 
         def on_focus_in(event):
             if self.input_text.get("1.0", "end-1c") == self.placeholder:
                 self.input_text.delete("1.0", "end")
-                self.input_text.configure(text_color=("#1a1a1a", "#e0e0e0"))  # Normal text color
+                self.input_text.configure(text_color=self.theme_colors["text"])
 
         def on_focus_out(event):
             if not self.input_text.get("1.0", "end-1c").strip():
                 self.input_text.insert("1.0", self.placeholder)
-                self.input_text.configure(text_color=("#999999", "#666666"))  # Placeholder color
+                self.input_text.configure(text_color=self.theme_colors["text_secondary"])
 
         self.input_text.bind("<FocusIn>", on_focus_in)
         self.input_text.bind("<FocusOut>", on_focus_out)
@@ -204,21 +211,42 @@ class InputPanel(ctk.CTkFrame):
         """Set focus to the input text area."""
         self.input_text.focus()
 
-    def update_theme(self, theme: str) -> None:
+    def update_theme_colors(self, theme_colors: Dict[str, str]) -> None:
         """
         Update the input panel theme colors.
 
         Args:
-            theme: Theme name ("dark", "light", or "system")
+            theme_colors: Dictionary of theme colors from config
         """
-        if theme == "light":
-            surface_color = "#f5f5f5"
-            bg_color = "#ffffff"
-            text_color = "#1a1a1a"
-        else:
-            surface_color = "#2d2d2d"
-            bg_color = "#1a1a1a"
-            text_color = "#e0e0e0"
+        self.theme_colors = theme_colors
 
-        self.configure(fg_color=surface_color)
-        self.input_text.configure(fg_color=bg_color, text_color=text_color)
+        # Update frame background
+        self.configure(fg_color=theme_colors["surface"])
+
+        # Update text input colors
+        self.input_text.configure(
+            fg_color=theme_colors["background"],
+            text_color=theme_colors["text"],
+            border_color=theme_colors["primary"]
+        )
+
+        # Update send button
+        self.send_button.configure(
+            fg_color=theme_colors["primary"],
+            hover_color=theme_colors["primary_hover"]
+        )
+
+        # Re-setup placeholder to use new colors
+        # Check if current text is placeholder
+        current_text = self.input_text.get("1.0", "end-1c")
+        if current_text == self.placeholder or not current_text.strip():
+            self.input_text.configure(text_color=theme_colors["text_secondary"])
+
+    def update_theme(self, theme_colors: Dict[str, str]) -> None:
+        """
+        Update the input panel theme (wrapper for update_theme_colors).
+
+        Args:
+            theme_colors: Dictionary of theme colors from config
+        """
+        self.update_theme_colors(theme_colors)

@@ -43,6 +43,10 @@ class OllamaService:
         model: str,
         messages: List[Dict[str, str]],
         stream: bool = True,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
+        top_k: Optional[int] = None,
+        max_tokens: Optional[int] = None,
     ) -> Iterator[str] | Dict[str, Any]:
         """
         Send a message to Ollama and get response.
@@ -51,6 +55,10 @@ class OllamaService:
             model: The model name to use.
             messages: List of message dictionaries with 'role' and 'content'.
             stream: Whether to stream the response.
+            temperature: Controls randomness (0.0-2.0). Higher = more random.
+            top_p: Nucleus sampling threshold (0.0-1.0).
+            top_k: Limits token selection to top k tokens.
+            max_tokens: Maximum tokens to generate (num_predict in Ollama).
 
         Returns:
             Iterator of response chunks if streaming, else full response dict.
@@ -59,10 +67,22 @@ class OllamaService:
             Exception: If the API call fails.
         """
         try:
+            # Build options dictionary for model parameters
+            options = {}
+            if temperature is not None:
+                options["temperature"] = temperature
+            if top_p is not None:
+                options["top_p"] = top_p
+            if top_k is not None:
+                options["top_k"] = top_k
+            if max_tokens is not None:
+                options["num_predict"] = max_tokens  # Ollama uses num_predict
+
             response = self.client.chat(
                 model=model,
                 messages=messages,
                 stream=stream,
+                options=options if options else None,
             )
 
             if stream:

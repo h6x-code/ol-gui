@@ -5,6 +5,7 @@ import customtkinter as ctk
 from typing import Callable, List, Optional, Dict
 from pathlib import Path
 from PIL import Image
+from utils.config import get_theme_colors
 
 
 class Sidebar(ctk.CTkFrame):
@@ -17,6 +18,7 @@ class Sidebar(ctk.CTkFrame):
         on_conversation_select: Optional[Callable[[int], None]] = None,
         on_new_conversation: Optional[Callable[[], None]] = None,
         on_delete_conversation: Optional[Callable[[int], None]] = None,
+        theme_colors: Optional[Dict[str, str]] = None,
         **kwargs,
     ):
         """
@@ -28,6 +30,7 @@ class Sidebar(ctk.CTkFrame):
             on_conversation_select: Callback when conversation is selected.
             on_new_conversation: Callback when new conversation is requested.
             on_delete_conversation: Callback when conversation is deleted.
+            theme_colors: Optional theme color dictionary. Defaults to dark theme.
             **kwargs: Additional arguments for CTkFrame.
         """
         super().__init__(parent, **kwargs)
@@ -41,6 +44,7 @@ class Sidebar(ctk.CTkFrame):
         self.conversation_buttons: Dict[int, ctk.CTkButton] = {}
         self.conversation_options_buttons: Dict[int, ctk.CTkButton] = {}  # Store options buttons
         self.current_font_size: int = 14  # Default font size, will be updated
+        self.theme_colors = theme_colors or get_theme_colors("dark")
 
         self._load_logo()
         self._setup_ui()
@@ -83,7 +87,7 @@ class Sidebar(ctk.CTkFrame):
     def _setup_ui(self) -> None:
         """Set up the sidebar UI."""
         self.configure(
-            fg_color=("#e0e0e0", "#2d2d2d"),  # (light, dark)
+            fg_color=self.theme_colors["surface"],
             corner_radius=0,
         )
 
@@ -104,7 +108,7 @@ class Sidebar(ctk.CTkFrame):
             self,
             text="OL-GUI",
             font=("", 24, "bold"),
-            text_color=("#2196f3", "#4a9eff"),  # (light, dark)
+            text_color=self.theme_colors["primary"],
         )
         self.header.pack(pady=(0, 10), padx=20)
 
@@ -114,8 +118,8 @@ class Sidebar(ctk.CTkFrame):
             text="+ New Chat",
             command=self._handle_new_conversation,
             font=("", 14, "bold"),
-            fg_color=("#2196f3", "#4a9eff"),  # (light, dark)
-            hover_color=("#1976d2", "#3d8ee6"),
+            fg_color=self.theme_colors["primary"],
+            hover_color=self.theme_colors["primary_hover"],
             height=40,
         )
         self.new_conv_btn.pack(pady=(0, 20), padx=20, fill="x")
@@ -125,7 +129,7 @@ class Sidebar(ctk.CTkFrame):
             self,
             text="Model",
             font=("", 12, "bold"),
-            text_color=("#666666", "#a0a0a0"),  # (light, dark)
+            text_color=self.theme_colors["text_secondary"],
             anchor="w",
         )
         self.model_label.pack(pady=(0, 5), padx=20, fill="x")
@@ -142,9 +146,9 @@ class Sidebar(ctk.CTkFrame):
             command=self._handle_model_change,
             font=("", 12),
             dropdown_font=("", 12),  # Font for dropdown menu items
-            fg_color=("#2196f3", "#4a9eff"),  # (light, dark)
-            button_color=("#2196f3", "#4a9eff"),
-            button_hover_color=("#1976d2", "#3d8ee6"),
+            fg_color=self.theme_colors["primary"],
+            button_color=self.theme_colors["primary"],
+            button_hover_color=self.theme_colors["primary_hover"],
             anchor="w",  # Align text to left to prevent overlap with dropdown button
             height=dropdown_height,  # Scale height with font size
         )
@@ -157,15 +161,15 @@ class Sidebar(ctk.CTkFrame):
             text="⟳ Refresh",
             command=self._handle_refresh_models,
             font=("", 11),
-            text_color=("#000000", "#ffffff"),
+            text_color=self.theme_colors["text"],
             fg_color="transparent",
-            hover_color=("#aaaaaa", "#3d3d3d"),  # (light, dark)
+            hover_color=self.theme_colors["border"],
             height=30,
         )
         self.refresh_btn.pack(pady=(0, 20), padx=20, fill="x")
 
         # Separator
-        self.separator = ctk.CTkFrame(self, height=2, fg_color=("#e0e0e0", "#1a1a1a"))
+        self.separator = ctk.CTkFrame(self, height=2, fg_color=self.theme_colors["border"])
         self.separator.pack(fill="x", padx=20, pady=10)
 
         # Conversation history section
@@ -173,15 +177,32 @@ class Sidebar(ctk.CTkFrame):
             self,
             text="Conversations",
             font=("", 12, "bold"),
-            text_color=("#666666", "#a0a0a0"),  # (light, dark)
+            text_color=self.theme_colors["text_secondary"],
             anchor="w",
         )
         self.history_label.pack(pady=(10, 5), padx=20, fill="x")
+
+
+        # Search entry
+        self.search_entry = ctk.CTkEntry(
+            self,
+            placeholder_text="Search conversations...",
+            font=("", 24),
+            height=30,
+            fg_color=self.theme_colors["surface"],
+            border_color=self.theme_colors["border"],
+            text_color=self.theme_colors["text"],
+            placeholder_text_color=self.theme_colors["text_secondary"],
+        )
+        self.search_entry.pack(fill="x", padx=20, pady=(0, 10))
+        self.search_entry.bind("<Return>", self._handle_search)
 
         # Scrollable frame for conversations
         self.conversations_frame = ctk.CTkScrollableFrame(
             self,
             fg_color="transparent",
+            scrollbar_button_color=self.theme_colors["border"],
+            scrollbar_button_hover_color=self.theme_colors["primary"],
         )
         self.conversations_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
@@ -195,8 +216,8 @@ class Sidebar(ctk.CTkFrame):
             command=self._handle_settings,
             font=("", 12),
             fg_color="transparent",
-            text_color=("#1a1a1a", "#e0e0e0"),  # (light, dark)
-            hover_color=("#aaaaaa", "#3d3d3d"),  # (light, dark)
+            text_color=self.theme_colors["text"],
+            hover_color=self.theme_colors["border"],
             height=35,
         )
         self.settings_btn.pack(side="bottom", pady=15, padx=20, fill="x")
@@ -225,6 +246,12 @@ class Sidebar(ctk.CTkFrame):
         """Handle settings button click."""
         if hasattr(self, "on_settings") and self.on_settings:
             self.on_settings()
+
+    def _handle_search(self, event=None) -> None:
+        """Handle search entry."""
+        query = self.search_entry.get()
+        if hasattr(self, "on_search") and self.on_search and query.strip():
+            self.on_search(query)
 
     def update_models(self, models: List[str], current_model: Optional[str] = None) -> None:
         """
@@ -271,9 +298,9 @@ class Sidebar(ctk.CTkFrame):
             text=display_title,
             command=lambda: self._handle_conversation_click(conv_id),
             font=("", conv_font_size),
-            text_color="#e0e0e0" if is_current else ("#1a1a1a", "#e0e0e0"),  # (light, dark)
-            fg_color=("#2196f3", "#4a9eff") if is_current else "transparent",
-            hover_color=("#1976d2", "#3d8ee6") if is_current else ("#aaaaaa", "#3d3d3d"),
+            text_color="#e0e0e0" if is_current else self.theme_colors["text"],
+            fg_color=self.theme_colors["background"] if is_current else "transparent",
+            hover_color=self.theme_colors["primary_hover"] if is_current else self.theme_colors["border"],
             anchor="w",
             height=30,
         )
@@ -285,9 +312,9 @@ class Sidebar(ctk.CTkFrame):
             text="⋮",
             command=lambda: self._show_conversation_options(conv_id, options_btn),
             font=("", options_font_size),
-            text_color=("#1a1a1a", "#e0e0e0"),  # (light, dark)
+            text_color=self.theme_colors["text"],
             fg_color="transparent",
-            hover_color=("#aaaaaa", "#3d3d3d"),
+            hover_color=self.theme_colors["border"],
             width=30,
             height=30,
         )
@@ -300,7 +327,7 @@ class Sidebar(ctk.CTkFrame):
             # Deselect all other conversations
             for cid, btn in self.conversation_buttons.items():
                 if cid != conv_id:
-                    btn.configure(fg_color="transparent", hover_color=("#aaaaaa", "#3d3d3d"))
+                    btn.configure(fg_color="transparent", hover_color=self.theme_colors["border"])
 
             self.current_conversation_id = conv_id
 
@@ -315,15 +342,15 @@ class Sidebar(ctk.CTkFrame):
         for cid, btn in self.conversation_buttons.items():
             if cid == conv_id:
                 btn.configure(
-                    fg_color="#4a9eff",
+                    fg_color=self.theme_colors["primary"],
                     text_color="#e0e0e0",
-                    hover_color="#3d8ee6"
+                    hover_color=self.theme_colors["primary_hover"]
                 )
             else:
                 btn.configure(
                     fg_color="transparent",
-                    text_color=("#1a1a1a", "#e0e0e0"),
-                    hover_color=("#aaaaaa", "#3d3d3d")
+                    text_color=self.theme_colors["text"],
+                    hover_color=self.theme_colors["border"]
                 )
 
         self.current_conversation_id = conv_id
@@ -345,14 +372,14 @@ class Sidebar(ctk.CTkFrame):
         menu.overrideredirect(True)  # Remove window decorations
 
         # Configure menu appearance
-        menu.configure(fg_color=("#ffffff", "#2d2d2d"))
+        menu.configure(fg_color=self.theme_colors["surface"])
 
         # Create menu frame
         menu_frame = ctk.CTkFrame(
             menu,
-            fg_color=("#ffffff", "#2d2d2d"),
+            fg_color=self.theme_colors["surface"],
             border_width=1,
-            border_color=("#cccccc", "#555555"),
+            border_color=self.theme_colors["border"],
         )
         menu_frame.pack(fill="both", expand=True)
 
@@ -362,8 +389,8 @@ class Sidebar(ctk.CTkFrame):
             text="Rename",
             command=lambda: self._handle_rename_click(conv_id, menu),
             fg_color="transparent",
-            text_color=("#1a1a1a", "#e0e0e0"),
-            hover_color=("#e0e0e0", "#3d3d3d"),
+            text_color=self.theme_colors["text"],
+            hover_color=self.theme_colors["border"],
             anchor="w",
             height=30,
         )
@@ -375,7 +402,7 @@ class Sidebar(ctk.CTkFrame):
             text="Delete",
             command=lambda: self._handle_delete_click(conv_id, menu),
             fg_color="transparent",
-            text_color=("#1a1a1a", "#e0e0e0"),
+            text_color=self.theme_colors["text"],
             hover_color=("#ee9a90", "#c0392b"),
             anchor="w",
             height=30,
@@ -517,6 +544,21 @@ class Sidebar(ctk.CTkFrame):
         """
         self.on_rename_conversation = callback
 
+    def set_search_callback(self, callback: Callable[[str], None]) -> None:
+        """
+        Set the callback for search.
+
+        Args:
+            callback: Function to call when search is performed.
+                     Takes query string as argument.
+        """
+        self.on_search = callback
+
+    def focus_search(self) -> None:
+        """Focus the search entry field."""
+        if hasattr(self, 'search_entry'):
+            self.search_entry.focus()
+
     def update_conversation_title(self, conv_id: int, new_title: str) -> None:
         """
         Update the displayed title of a conversation.
@@ -530,30 +572,110 @@ class Sidebar(ctk.CTkFrame):
             display_title = new_title[:30] + "..." if len(new_title) > 30 else new_title
             self.conversation_buttons[conv_id].configure(text=display_title)
 
-    def update_theme(self, theme: str) -> None:
+    def update_theme_colors(self, theme_colors: Dict[str, str]) -> None:
         """
         Update the sidebar theme colors.
 
         Args:
-            theme: Theme name ("dark", "light", or "system")
+            theme_colors: Dictionary of theme colors from config
         """
-        # Most widgets use color tuples and update automatically via set_appearance_mode()
-        # No need to manually update sidebar, labels, buttons, etc.
+        self.theme_colors = theme_colors
+
+        # Update frame background
+        self.configure(fg_color=theme_colors["surface"])
+
+        # Update header
+        self.header.configure(text_color=theme_colors["primary"])
+
+        # Update new conversation button
+        self.new_conv_btn.configure(
+            fg_color=theme_colors["primary"],
+            hover_color=theme_colors["primary_hover"]
+        )
+
+        # Update labels
+        self.model_label.configure(text_color=theme_colors["text_secondary"])
+        self.history_label.configure(text_color=theme_colors["text_secondary"])
+
+        # Update model dropdown
+        self.model_dropdown.configure(
+            fg_color=theme_colors["primary"],
+            button_color=theme_colors["primary"],
+            button_hover_color=theme_colors["primary_hover"]
+        )
+
+        # Update buttons
+        self.refresh_btn.configure(
+            text_color=theme_colors["text"],
+            hover_color=theme_colors["border"]
+        )
+        self.settings_btn.configure(
+            text_color=theme_colors["text"],
+            hover_color=theme_colors["border"]
+        )
+
+        # Update separator
+        self.separator.configure(fg_color=theme_colors["border"])
+
+        # Update search entry
+        self.search_entry.configure(
+            fg_color=theme_colors["surface"],
+            border_color=theme_colors["border"],
+            text_color=theme_colors["text"],
+            placeholder_text_color=theme_colors["text_secondary"]
+        )
+
+        # Update conversations frame
+        self.conversations_frame.configure(
+            fg_color="transparent",
+            scrollbar_button_color=theme_colors["border"],
+            scrollbar_button_hover_color=theme_colors["primary"]
+        )
 
         # Update all conversation buttons
         for conv_id, btn in self.conversation_buttons.items():
             is_current = (conv_id == self.current_conversation_id)
             if is_current:
                 btn.configure(
-                    fg_color="#4a9eff",
+                    fg_color=theme_colors["primary"],
                     text_color="#e0e0e0",
-                    hover_color="#3d8ee6"
+                    hover_color=theme_colors["primary_hover"]
                 )
             else:
                 btn.configure(
                     fg_color="transparent",
-                    text_color=("#1a1a1a", "#e0e0e0"),
-                    hover_color=("#aaaaaa", "#3d3d3d")
+                    text_color=theme_colors["text"],
+                    hover_color=theme_colors["border"]
+                )
+
+        # Update conversation options buttons
+        for btn in self.conversation_options_buttons.values():
+            btn.configure(
+                text_color=theme_colors["text"],
+                hover_color=theme_colors["border"]
+            )
+
+    def update_theme(self, theme: str) -> None:
+        """
+        Update the sidebar theme (deprecated - use update_theme_colors).
+
+        Args:
+            theme: Theme name ("dark", "light", or "system")
+        """
+        # For backwards compatibility - just update conversation buttons
+        for conv_id, btn in self.conversation_buttons.items():
+            is_current = (conv_id == self.current_conversation_id)
+            if is_current:
+                btn.configure(
+                    fg_color=self.theme_colors["primary"],
+                    text_color="#e0e0e0",
+                    hover_color=self.theme_colors["primary_hover"]
+                )
+            else:
+                btn.configure(
+                    fg_color="transparent",
+                    text_color=self.theme_colors["text"],
+                    hover_color=self.theme_colors["border"]
                 )
 
     def update_font_size(self, font_size: int) -> None:
