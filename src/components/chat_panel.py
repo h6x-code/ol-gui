@@ -113,11 +113,15 @@ class ChatPanel(ctk.CTkScrollableFrame):
 
         # Force update of the scrollable frame's canvas
         self.update_idletasks()
-        if hasattr(self, '_parent_canvas'):
-            self._parent_canvas.configure(scrollregion=self._parent_canvas.bbox("all"))
+
+        # Refresh the bubble height after it's been packed and geometry is available
+        self.after(50, bubble.refresh_height)
+
+        # Update scroll region after bubble height is refreshed
+        self.after(100, self._update_scroll_region)
 
         # Scroll to bottom
-        self.after(100, self._scroll_to_bottom)
+        self.after(150, self._scroll_to_bottom)
 
         return bubble
 
@@ -146,9 +150,7 @@ class ChatPanel(ctk.CTkScrollableFrame):
         if self._current_streaming_bubble:
             self._current_streaming_bubble.update_content(content)
             # Update canvas scroll region as content grows
-            self.update_idletasks()
-            if hasattr(self, '_parent_canvas'):
-                self._parent_canvas.configure(scrollregion=self._parent_canvas.bbox("all"))
+            self._update_scroll_region()
             self.after(50, self._scroll_to_bottom)
 
     def finish_streaming_message(self) -> None:
@@ -177,6 +179,10 @@ class ChatPanel(ctk.CTkScrollableFrame):
 
         for message in messages:
             self.add_message(message)
+
+        # After loading all messages, refresh heights and scroll region to ensure proper sizing
+        self.after(50, self._recalculate_all_heights)
+        self.after(150, self._update_scroll_region)
 
     def _scroll_to_bottom(self) -> None:
         """Scroll the chat panel to the bottom."""
@@ -217,8 +223,18 @@ class ChatPanel(ctk.CTkScrollableFrame):
     def _recalculate_all_heights(self) -> None:
         """Recalculate heights for all message bubbles."""
         for bubble in self.message_widgets:
-            if hasattr(bubble, '_calculate_height'):
-                bubble._calculate_height()
+            if hasattr(bubble, 'refresh_height'):
+                bubble.refresh_height()
+
+        # Update scroll region after recalculating heights
+        self.after(50, self._update_scroll_region)
+
+    def _update_scroll_region(self) -> None:
+        """Update the scroll region to fit the actual content size."""
+        self.update_idletasks()
+        if hasattr(self, '_parent_canvas'):
+            # Get the bounding box of all content
+            self._parent_canvas.configure(scrollregion=self._parent_canvas.bbox("all"))
 
     def _bind_mouse_wheel(self) -> None:
         """Bind mouse wheel events for scrolling when mouse enters this widget."""

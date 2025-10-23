@@ -130,6 +130,15 @@ class MessageBubble(ctk.CTkFrame):
 
         self.content_label.configure(height=final_height)
 
+    def refresh_height(self) -> None:
+        """
+        Public method to refresh the message bubble height.
+
+        This ensures the height is recalculated with current widget geometry,
+        useful after window resizes or when loading conversations.
+        """
+        self._calculate_height()
+
     def update_content(self, content: str) -> None:
         """
         Update the message content (for streaming responses).
