@@ -74,7 +74,7 @@ class MessageBubble(ctk.CTkFrame):
             fg_color=fg_color,
             text_color=text_color,
             wrap="word",
-            activate_scrollbars=True,  # Enable scrollbars for long messages
+            activate_scrollbars=False,  # bubbles expand to fit content
         )
         self.content_label.insert("1.0", self.content)
         self.content_label.configure(state="disabled")  # Read-only
@@ -123,11 +123,10 @@ class MessageBubble(ctk.CTkFrame):
         # Calculate total height with extra padding
         content_height = total_lines * line_height + 10  # Add 10px extra padding
 
-        # Set reasonable min/max bounds
+        # Set reasonable min bound (no max to allow full expansion)
         min_height = line_height * 2  # At least 2 lines
-        max_height = 600  # Increased maximum to allow taller bubbles
 
-        final_height = max(min_height, min(content_height, max_height))
+        final_height = max(min_height, content_height)
 
         self.content_label.configure(height=final_height)
 

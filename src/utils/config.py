@@ -6,7 +6,7 @@ from pathlib import Path
 # Application info
 APP_NAME = "ol-gui"
 APP_DISPLAY_NAME = "Ol-GUI"
-APP_VERSION = "0.0.0"
+APP_VERSION = "0.0.1"
 
 # Paths
 CONFIG_DIR = Path.home() / ".config" / APP_NAME
